@@ -28,7 +28,7 @@ class ScraperService:
     def _scrape_bbc(self, target_date: date) -> List[Dict]:
         url = f"https://www.bbc.co.uk/sport/football/scores-fixtures/{target_date.isoformat()}"
         with self.rate_limiter.wait():
-        response = requests.get(url, timeout=15)
+            response = requests.get(url, timeout=15)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, "html.parser")
         fixtures: List[Dict] = []
