@@ -23,7 +23,7 @@ def load_settings() -> Dict[str, str]:
     except (json.JSONDecodeError, OSError):
         return DEFAULT_SETTINGS.copy()
     merged = DEFAULT_SETTINGS.copy()
-    merged.update({k: str(v) for k, v in data.items()})
+    merged.update(data)
     return merged
 
 
