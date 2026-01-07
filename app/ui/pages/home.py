@@ -184,7 +184,7 @@ class HomePage(QWidget):
         placeholder_card.setLayout(placeholder_layout)
         self.cards_layout.addWidget(placeholder_card, 0, 0, 1, 2)
 
-    def show_empty_state(self, target_date, reason: str | None = None) -> None:
+    def show_empty_state(self, target_date, reason: Optional[str] = None) -> None:
         self.rows = []
         self._clear_cards()
         detail = reason or "No data returned by providers."

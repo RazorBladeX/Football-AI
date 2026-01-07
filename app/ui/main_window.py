@@ -1,5 +1,6 @@
-from datetime import date, timedelta
 import logging
+from datetime import date, timedelta
+from typing import List, Optional
 
 from PySide6.QtCore import QDate
 from PySide6.QtWidgets import (
@@ -228,7 +229,7 @@ class MainWindow(QMainWindow):
         today = date.today()
         current_qdate = self.date_picker.date()
         current_date = current_qdate.toPython() if hasattr(current_qdate, "toPython") else current_qdate.toPyDate()
-        window_rows: list[dict] | None = None
+        window_rows: Optional[List[dict]] = None
         end_date = today + timedelta(days=days_ahead)
         for offset in range(days_ahead + 1):
             target_date = today + timedelta(days=offset)
