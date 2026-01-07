@@ -1,12 +1,13 @@
 import logging
 import threading
 import time
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from app.config import settings
 from app.services.match_service import MatchService
 from app.services.scraper_service import ScraperService
 from app.utils.datetime_utils import utc_now
+from app.utils.settings_store import load_settings
 
 logger = logging.getLogger(__name__)
 
@@ -33,14 +34,27 @@ class LiveScoreService:
     def _run_loop(self) -> None:
         while self._running:
             try:
-                self.refresh_today()
+                self.refresh_window()
             except Exception as exc:
                 logger.error("Background refresh failed: %s", exc)
             time.sleep(settings.refresh_interval_seconds)
 
     def refresh_today(self) -> None:
+        self.refresh_window(days_ahead=0)
+
+    def refresh_window(self, days_ahead: int | None = None) -> None:
+        if days_ahead is None:
+            try:
+                days_ahead = int(load_settings().get("scrape_days_ahead", 0))
+            except (TypeError, ValueError):
+                days_ahead = 0
         today = date.fromtimestamp(time.time())
-        fixtures = self.scraper.get_fixtures(today)
+        for offset in range(days_ahead + 1):
+            target_date = today + timedelta(days=offset)
+            self._refresh_date(target_date)
+
+    def _refresh_date(self, target_date: date) -> None:
+        fixtures = self.scraper.get_fixtures(target_date)
         for item in fixtures:
             try:
                 league = self.matches.ensure_league(item["league"], tier=1)

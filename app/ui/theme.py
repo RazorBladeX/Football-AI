@@ -46,6 +46,8 @@ def apply_dark_palette(app: QApplication) -> None:
         QTableWidget { background-color: %s; gridline-color: %s; alternate-background-color: %s; border: 1px solid %s; border-radius: 14px; }
         QTableWidget::item { padding: 10px; }
         QHeaderView::section { background-color: %s; color: %s; padding: 10px; border: none; font-weight: 800; }
+        QScrollArea { background-color: %s; border: 1px solid %s; border-radius: 14px; }
+        QScrollArea#plain-scroll { background-color: transparent; border: none; }
         QLabel#muted { color: %s; }
         """
         % (
@@ -77,6 +79,8 @@ def apply_dark_palette(app: QApplication) -> None:
             CARD,
             BORDER,
             TEXT,
+            SURFACE,
+            BORDER,
             SUBTEXT,
         )
     )

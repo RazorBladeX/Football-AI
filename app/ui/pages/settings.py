@@ -1,3 +1,5 @@
+from typing import Callable, Optional
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QComboBox,
@@ -18,13 +20,14 @@ FALLBACK_REFRESH_MINUTES = 15
 
 
 class SettingsPage(QWidget):
-    def __init__(self):
+    def __init__(self, sync_callback: Optional[Callable[[int], None]] = None):
         super().__init__()
         self.settings = load_settings()
+        self.sync_callback = sync_callback
 
         header = QLabel("System & AI Settings")
         header.setStyleSheet("font-size: 20px; font-weight: 800;")
-        sub = QLabel("Configure Ollama Cloud or local/remote nodes, plus refresh cadence.")
+        sub = QLabel("Configure Ollama Cloud or local/remote nodes, plus refresh cadence and scraping horizon.")
         sub.setObjectName("muted")
         sub.setWordWrap(True)
 
@@ -58,6 +61,15 @@ class SettingsPage(QWidget):
         except (TypeError, ValueError):
             self.refresh.setValue(FALLBACK_REFRESH_MINUTES)
 
+        self.scrape_horizon = QSpinBox()
+        self.scrape_horizon.setRange(0, 14)
+        try:
+            default_horizon = DEFAULT_SETTINGS["scrape_days_ahead"]
+            raw_horizon = self.settings.get("scrape_days_ahead", default_horizon)
+            self.scrape_horizon.setValue(int(raw_horizon))
+        except (TypeError, ValueError):
+            self.scrape_horizon.setValue(2)
+
         form = QFrame()
         form.setObjectName("panel")
         form_layout = QGridLayout()
@@ -75,6 +87,8 @@ class SettingsPage(QWidget):
         form_layout.addWidget(self.model, 4, 1)
         form_layout.addWidget(QLabel("Refresh (min)"), 5, 0)
         form_layout.addWidget(self.refresh, 5, 1)
+        form_layout.addWidget(QLabel("Sync horizon (days ahead)"), 6, 0)
+        form_layout.addWidget(self.scrape_horizon, 6, 1)
         form.setLayout(form_layout)
 
         self.status = QLabel("")
@@ -82,6 +96,9 @@ class SettingsPage(QWidget):
 
         save_button = QPushButton("Save settings")
         save_button.clicked.connect(self._save_settings)
+        sync_button = QPushButton("Sync upcoming days")
+        sync_button.setObjectName("ghost")
+        sync_button.clicked.connect(self._run_sync)
 
         layout = QVBoxLayout()
         layout.setSpacing(12)
@@ -89,6 +106,7 @@ class SettingsPage(QWidget):
         layout.addWidget(form)
         button_row = QHBoxLayout()
         button_row.addStretch()
+        button_row.addWidget(sync_button)
         button_row.addWidget(save_button)
         layout.addLayout(button_row)
         layout.addWidget(self.status)
@@ -112,8 +130,21 @@ class SettingsPage(QWidget):
                 "ollama_port": self.port.text(),
                 "ollama_model": self.model.text(),
                 "refresh_interval_minutes": str(self.refresh.value()),
+                "scrape_days_ahead": str(self.scrape_horizon.value()),
             }
         )
         save_settings(self.settings)
         self.status.setText("Settings saved.")
         self.status.setAlignment(Qt.AlignRight)
+
+    def _run_sync(self) -> None:
+        if not self.sync_callback:
+            self.status.setText("Sync callback unavailable.")
+            return
+        days = self.scrape_horizon.value()
+        self.status.setText(f"Syncing today + {days} day(s)...")
+        try:
+            self.sync_callback(days)
+            self.status.setText(f"Synced fixtures for today + {days} day(s).")
+        except Exception as exc:  # pragma: no cover - UI feedback only
+            self.status.setText(f"Sync failed: {exc}")

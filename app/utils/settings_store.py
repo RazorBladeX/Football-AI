@@ -13,6 +13,7 @@ DEFAULT_SETTINGS: Dict[str, str] = {
     "ollama_port": "11434",
     "ollama_model": "llama3",
     "refresh_interval_minutes": "15",
+    "scrape_days_ahead": "2",
 }
 
 
