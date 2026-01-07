@@ -19,6 +19,10 @@ def ttl_cache(ttl_seconds: int = 60):
                     return value
             result = func(*args, **kwargs)
             cache[key] = (now + ttl_seconds, result)
+            if len(cache) > 256:
+                # Remove oldest item to bound memory
+                oldest = sorted(cache.items(), key=lambda item: item[1][0])[0][0]
+                cache.pop(oldest, None)
             return result
 
         return wrapper

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -20,7 +20,7 @@ class Prediction(Base):
     total_corners: Mapped[int | None] = mapped_column()
     total_cards: Mapped[int | None] = mapped_column()
     raw_response: Mapped[str | None] = mapped_column()
-    created_at: Mapped[datetime] = mapped_column(DateTime(), default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(), default=lambda: datetime.now(timezone.utc))
 
     match: Mapped["Match"] = relationship(back_populates="predictions")
 

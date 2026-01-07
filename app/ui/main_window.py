@@ -3,6 +3,7 @@ from typing import Optional
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QHBoxLayout,
     QListWidget,
     QListWidgetItem,
     QMainWindow,
@@ -59,17 +60,11 @@ class MainWindow(QMainWindow):
         sidebar_container = QWidget()
         sidebar_container.setLayout(layout)
 
-        container = QWidget()
-        container_layout = QVBoxLayout()
-        container_layout.setContentsMargins(0, 0, 0, 0)
-        container_layout.addWidget(self.stack)
-        container.setLayout(container_layout)
-
         root = QWidget()
-        root_layout = QVBoxLayout()
+        root_layout = QHBoxLayout()
         root_layout.setContentsMargins(0, 0, 0, 0)
         root_layout.addWidget(sidebar_container)
-        root_layout.addWidget(container)
+        root_layout.addWidget(self.stack, stretch=1)
         root.setLayout(root_layout)
 
         self.setCentralWidget(root)
