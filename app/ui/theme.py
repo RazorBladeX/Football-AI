@@ -1,14 +1,17 @@
 from PySide6.QtGui import QColor, QPalette
 from PySide6.QtWidgets import QApplication
 
-PRIMARY = "#0d1117"
-SURFACE = "#111827"
-ACCENT = "#10b981"
+PRIMARY = "#0b1220"
+SURFACE = "#0f172a"
+PANEL = "#111c35"
+ACCENT = "#3b82f6"
+ACCENT_GRADIENT = "qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:1, stop:0 #2563eb, stop:1 #9333ea)"
 TEXT = "#e5e7eb"
 SUBTEXT = "#9ca3af"
-CARD = "#1f2937"
-BORDER = "#2d3748"
-SECONDARY_SURFACE = "#0b1729"
+CARD = "#0b162c"
+BORDER = "#1f2937"
+SOFT_HIGHLIGHT = "#1b2942"
+SECONDARY_SURFACE = "#0f1b31"
 
 
 def apply_dark_palette(app: QApplication) -> None:
@@ -28,35 +31,51 @@ def apply_dark_palette(app: QApplication) -> None:
     app.setStyleSheet(
         """
         QWidget { background-color: %s; color: %s; font-family: 'Inter', 'Segoe UI', sans-serif; }
-        QFrame#card { background-color: %s; border: 1px solid %s; border-radius: 10px; padding: 12px; }
-        QFrame#toolbar { background-color: %s; border: 1px solid %s; border-radius: 12px; padding: 14px; }
-        QFrame#pill { background-color: %s; border: 1px solid %s; border-radius: 12px; padding: 10px 14px; }
-        QListWidget { background-color: %s; border: none; }
-        QListWidget::item { padding: 10px 12px; }
-        QListWidget::item:selected { background-color: %s; border-radius: 6px; }
-        QPushButton { background-color: %s; color: %s; border: none; border-radius: 8px; padding: 10px 14px; font-weight: 600; }
-        QPushButton:hover { background-color: #0ea371; }
-        QTableWidget { background-color: %s; gridline-color: %s; alternate-background-color: %s; }
-        QHeaderView::section { background-color: %s; color: %s; padding: 8px; border: none; font-weight: 700; }
+        QFrame#sidebar { background-color: %s; border: 1px solid %s; border-radius: 18px; padding: 16px; }
+        QFrame#hero { background: %s; border: 1px solid %s; border-radius: 18px; padding: 20px; }
+        QFrame#card { background-color: %s; border: 1px solid %s; border-radius: 16px; padding: 16px; }
+        QFrame#panel { background-color: %s; border: 1px solid %s; border-radius: 16px; padding: 16px; }
+        QFrame#pill, QFrame#chip { background-color: %s; border: 1px solid %s; border-radius: 12px; padding: 8px 12px; }
+        QListWidget { background: transparent; border: none; }
+        QListWidget::item { padding: 12px 14px; border-radius: 12px; color: %s; }
+        QListWidget::item:selected { background-color: %s; color: #f8fafc; }
+        QPushButton { background-color: %s; color: %s; border: 1px solid %s; border-radius: 12px; padding: 12px 16px; font-weight: 700; }
+        QPushButton:hover { background-color: #2563eb; }
+        QPushButton#ghost { background-color: transparent; border: 1px solid %s; color: %s; }
+        QComboBox, QDateEdit { background-color: %s; color: %s; border: 1px solid %s; border-radius: 10px; padding: 10px 12px; }
+        QTableWidget { background-color: %s; gridline-color: %s; alternate-background-color: %s; border: 1px solid %s; border-radius: 14px; }
+        QTableWidget::item { padding: 10px; }
+        QHeaderView::section { background-color: %s; color: %s; padding: 10px; border: none; font-weight: 800; }
         QLabel#muted { color: %s; }
         """
         % (
             SURFACE,
             TEXT,
-            CARD,
-            BORDER,
             SECONDARY_SURFACE,
             BORDER,
-            CARD,
+            ACCENT_GRADIENT,
             BORDER,
             CARD,
+            BORDER,
+            PANEL,
+            BORDER,
+            SOFT_HIGHLIGHT,
+            BORDER,
+            TEXT,
             ACCENT,
             ACCENT,
-            PRIMARY,
+            BORDER,
+            BORDER,
+            TEXT,
+            PANEL,
+            TEXT,
+            BORDER,
             CARD,
             BORDER,
-            SECONDARY_SURFACE,
+            SURFACE,
+            BORDER,
             CARD,
+            BORDER,
             TEXT,
             SUBTEXT,
         )
