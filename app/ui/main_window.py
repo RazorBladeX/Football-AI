@@ -24,6 +24,7 @@ from app.services.scraper_service import ScraperService
 from app.database.db import get_session
 from app.ui.pages.home import HomePage
 from app.ui.pages.predictions import PredictionsPage
+from app.ui.pages.settings import SettingsPage
 
 
 class MainWindow(QMainWindow):
@@ -58,7 +59,7 @@ class MainWindow(QMainWindow):
         self.stack = QStackedWidget()
         self.home_page = HomePage(match_service, prediction_service)
         self.predictions_page = PredictionsPage(prediction_service, match_service)
-        self.settings_page = self._build_settings_page()
+        self.settings_page = SettingsPage()
         self.stack.addWidget(self.home_page)
         self.stack.addWidget(self.predictions_page)
         self.stack.addWidget(self.settings_page)
@@ -121,6 +122,14 @@ class MainWindow(QMainWindow):
         today_button.setObjectName("ghost")
         today_button.clicked.connect(lambda: self.date_picker.setDate(QDate.currentDate()))
         actions_row.addWidget(today_button)
+        predictions_button = QPushButton("Open predictions")
+        predictions_button.setObjectName("ghost")
+        predictions_button.clicked.connect(lambda: self.sidebar.setCurrentRow(1))
+        actions_row.addWidget(predictions_button)
+        settings_button = QPushButton("Settings")
+        settings_button.setObjectName("ghost")
+        settings_button.clicked.connect(lambda: self.sidebar.setCurrentRow(2))
+        actions_row.addWidget(settings_button)
         actions_row.addWidget(refresh_button)
         controls.addLayout(actions_row)
 
@@ -195,22 +204,3 @@ class MainWindow(QMainWindow):
 
     def _on_date_change(self, target: QDate) -> None:
         self._safe_refresh()
-
-    def _build_settings_page(self) -> QWidget:
-        container = QFrame()
-        container.setObjectName("card")
-        layout = QVBoxLayout()
-        layout.addWidget(QLabel("Settings & System"))
-        description = QLabel(
-            "This lightweight desktop app runs entirely on your machine, using BBC/ESPN feeds and optional Ollama models "
-            "to provide quick match insights. Adjust environment variables to change models or scrape sources."
-        )
-        description.setWordWrap(True)
-        description.setObjectName("muted")
-        layout.addWidget(description)
-        container.setLayout(layout)
-        shell = QWidget()
-        shell_layout = QVBoxLayout()
-        shell_layout.addWidget(container)
-        shell.setLayout(shell_layout)
-        return shell

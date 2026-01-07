@@ -8,8 +8,10 @@ from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from PySide6.QtWidgets import (
     QFrame,
     QGridLayout,
+    QHBoxLayout,
     QLabel,
     QHeaderView,
+    QPushButton,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
@@ -25,6 +27,7 @@ class HomePage(QWidget):
         super().__init__()
         self.match_service = match_service
         self.prediction_service = prediction_service
+        self.rows: List[dict] = []
 
         self.table = QTableWidget()
         self.table.setColumnCount(6)
@@ -34,6 +37,7 @@ class HomePage(QWidget):
         self.table.setAlternatingRowColors(True)
         self.table.setShowGrid(False)
         self.table.verticalHeader().setVisible(False)
+        self.table.cellClicked.connect(self._on_row_selected)
 
         self.status_label = QLabel("Today's fixtures")
         self.status_label.setStyleSheet("font-size: 20px; font-weight: 800;")
@@ -78,10 +82,55 @@ class HomePage(QWidget):
         chart_layout.addWidget(self.canvas)
         chart_card.setLayout(chart_layout)
 
+        self.detail_card = QFrame()
+        self.detail_card.setObjectName("panel")
+        detail_layout = QVBoxLayout()
+        self.detail_heading = QLabel("Match details")
+        self.detail_heading.setStyleSheet("font-size: 16px; font-weight: 700;")
+        self.detail_sub = QLabel("Click a game to view the live card, similar to FotMob.")
+        self.detail_sub.setObjectName("muted")
+
+        self.teams_label = QLabel("No match selected")
+        self.teams_label.setStyleSheet("font-size: 18px; font-weight: 800;")
+        self.league_label = QLabel("")
+        self.league_label.setObjectName("muted")
+
+        self.status_chip = QFrame()
+        self.status_chip.setObjectName("pill")
+        chip_layout = QHBoxLayout()
+        chip_layout.setContentsMargins(10, 6, 10, 6)
+        chip_layout.addWidget(QLabel("Status"))
+        self.status_value = QLabel("-")
+        chip_layout.addWidget(self.status_value)
+        chip_layout.addStretch()
+        self.status_chip.setLayout(chip_layout)
+
+        self.score_label = QLabel("")
+        self.score_label.setStyleSheet("font-size: 28px; font-weight: 800;")
+        self.kickoff_label = QLabel("")
+        self.kickoff_label.setObjectName("muted")
+
+        quick_row = QHBoxLayout()
+        quick_row.setSpacing(10)
+        quick_row.addWidget(self.status_chip)
+        quick_row.addStretch()
+
+        detail_layout.addWidget(self.detail_heading)
+        detail_layout.addWidget(self.detail_sub)
+        detail_layout.addLayout(quick_row)
+        detail_layout.addWidget(self.teams_label)
+        detail_layout.addWidget(self.score_label)
+        detail_layout.addWidget(self.league_label)
+        detail_layout.addWidget(self.kickoff_label)
+        detail_layout.addStretch()
+
+        self.detail_card.setLayout(detail_layout)
+
         grid = QGridLayout()
         grid.setSpacing(14)
         grid.addWidget(table_card, 0, 0, 1, 2)
-        grid.addWidget(chart_card, 0, 2, 1, 1)
+        grid.addWidget(self.detail_card, 0, 2, 1, 1)
+        grid.addWidget(chart_card, 1, 0, 1, 3)
         grid.setColumnStretch(0, 3)
         grid.setColumnStretch(1, 0)
         grid.setColumnStretch(2, 2)
@@ -93,6 +142,7 @@ class HomePage(QWidget):
         self.setLayout(layout)
 
     def load_matches(self, rows: List[dict], target_date) -> None:
+        self.rows = rows
         self.table.setRowCount(len(rows))
         for i, match in enumerate(rows):
             self.table.setItem(i, 0, QTableWidgetItem(match.get("league", "")))
@@ -113,6 +163,8 @@ class HomePage(QWidget):
         status_counts = self._count_statuses(rows)
         self._render_chart(status_counts)
         self._update_metrics(status_counts)
+        if rows:
+            self._set_detail(rows[0])
 
     def _render_chart(self, status_counts: dict) -> None:
         self.figure.clear()
@@ -161,3 +213,25 @@ class HomePage(QWidget):
                 continue
             status_counts[status] += 1
         return status_counts
+
+    def _on_row_selected(self, row: int, _col: int) -> None:
+        if 0 <= row < len(self.rows):
+            self._set_detail(self.rows[row])
+
+    def _set_detail(self, match: dict) -> None:
+        home = match.get("home", "")
+        away = match.get("away", "")
+        self.teams_label.setText(f"{home} vs {away}")
+        status = match.get("status", "upcoming").title()
+        self.status_value.setText(status)
+        score = "-"
+        if match.get("home_score") is not None and match.get("away_score") is not None:
+            score = f"{match['home_score']} - {match['away_score']}"
+        self.score_label.setText(score if score != "-" else "Awaiting kickoff")
+        league = match.get("league", "")
+        self.league_label.setText(f"Competition · {league}")
+        kickoff_raw = match.get("kickoff")
+        kickoff_display = kickoff_raw or "TBD"
+        if isinstance(kickoff_raw, str):
+            kickoff_display = kickoff_raw.replace("T", " ").replace("Z", "")
+        self.kickoff_label.setText(f"Kickoff · {kickoff_display}")

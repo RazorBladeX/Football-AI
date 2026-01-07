@@ -42,7 +42,7 @@ def apply_dark_palette(app: QApplication) -> None:
         QPushButton { background-color: %s; color: %s; border: 1px solid %s; border-radius: 12px; padding: 12px 16px; font-weight: 700; }
         QPushButton:hover { background-color: #2563eb; }
         QPushButton#ghost { background-color: transparent; border: 1px solid %s; color: %s; }
-        QComboBox, QDateEdit { background-color: %s; color: %s; border: 1px solid %s; border-radius: 10px; padding: 10px 12px; }
+        QComboBox, QDateEdit, QLineEdit { background-color: %s; color: %s; border: 1px solid %s; border-radius: 10px; padding: 10px 12px; }
         QTableWidget { background-color: %s; gridline-color: %s; alternate-background-color: %s; border: 1px solid %s; border-radius: 14px; }
         QTableWidget::item { padding: 10px; }
         QHeaderView::section { background-color: %s; color: %s; padding: 10px; border: none; font-weight: 800; }
