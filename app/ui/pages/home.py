@@ -64,8 +64,11 @@ class HomePage(QWidget):
             self.table.setItem(i, 0, QTableWidgetItem(match.get("league", "")))
             self.table.setItem(i, 1, QTableWidgetItem(match.get("home", "")))
             self.table.setItem(i, 2, QTableWidgetItem(match.get("away", "")))
-            kickoff = match.get("kickoff") or "-"
-            self.table.setItem(i, 3, QTableWidgetItem(kickoff.replace("T", " ").replace("Z", "")))
+            kickoff_raw = match.get("kickoff")
+            kickoff_display = kickoff_raw or "-"
+            if isinstance(kickoff_raw, str):
+                kickoff_display = kickoff_raw.replace("T", " ").replace("Z", "")
+            self.table.setItem(i, 3, QTableWidgetItem(kickoff_display))
             self.table.setItem(i, 4, QTableWidgetItem(match.get("status", "").title()))
             score = "-"
             if match.get("home_score") is not None and match.get("away_score") is not None:
@@ -73,17 +76,11 @@ class HomePage(QWidget):
             self.table.setItem(i, 5, QTableWidgetItem(score))
         self.status_label.setText(f"Loaded {len(rows)} fixtures")
         self.sub_status.setText(f"Viewing fixtures for {target_date.strftime('%b %d, %Y')}")
-        self._render_chart(rows)
-        self._update_metrics(rows)
+        status_counts = self._count_statuses(rows)
+        self._render_chart(status_counts)
+        self._update_metrics(status_counts)
 
-    def _render_chart(self, rows: List[dict]) -> None:
-        status_counts = {"live": 0, "finished": 0, "upcoming": 0}
-        for m in rows:
-            status = m.get("status", "upcoming").lower()
-            if status not in status_counts:
-                status_counts["upcoming"] += 1
-                continue
-            status_counts[status] += 1
+    def _render_chart(self, status_counts: dict) -> None:
         self.figure.clear()
         ax = self.figure.add_subplot(111)
         bars = list(status_counts.keys())
@@ -117,7 +114,11 @@ class HomePage(QWidget):
             self.metric_labels[key] = value
         return layout
 
-    def _update_metrics(self, rows: List[dict]) -> None:
+    def _update_metrics(self, status_counts: dict) -> None:
+        for key, label in self.metric_labels.items():
+            label.setText(str(status_counts.get(key, 0)))
+
+    def _count_statuses(self, rows: List[dict]) -> dict:
         status_counts = {"live": 0, "finished": 0, "upcoming": 0}
         for m in rows:
             status = m.get("status", "upcoming").lower()
@@ -125,5 +126,4 @@ class HomePage(QWidget):
                 status_counts["upcoming"] += 1
                 continue
             status_counts[status] += 1
-        for key, label in self.metric_labels.items():
-            label.setText(str(status_counts.get(key, 0)))
+        return status_counts

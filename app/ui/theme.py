@@ -8,7 +8,7 @@ TEXT = "#e5e7eb"
 SUBTEXT = "#9ca3af"
 CARD = "#1f2937"
 BORDER = "#2d3748"
-SOFT = "#0b1729"
+SECONDARY_SURFACE = "#0b1729"
 
 
 def apply_dark_palette(app: QApplication) -> None:
@@ -45,7 +45,7 @@ def apply_dark_palette(app: QApplication) -> None:
             TEXT,
             CARD,
             BORDER,
-            SOFT,
+            SECONDARY_SURFACE,
             BORDER,
             CARD,
             BORDER,
@@ -55,7 +55,7 @@ def apply_dark_palette(app: QApplication) -> None:
             PRIMARY,
             CARD,
             BORDER,
-            SOFT,
+            SECONDARY_SURFACE,
             CARD,
             TEXT,
             SUBTEXT,

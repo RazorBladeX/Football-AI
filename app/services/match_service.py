@@ -112,9 +112,12 @@ class MatchService:
                 .scalars()
                 .all()
             )
+            for match in matches:
+                session.expunge(match)
             return matches
 
     def get_match(self, match_id: int) -> Match | None:
+        """Return a detached Match with teams eagerly loaded, or None if missing."""
         with get_session() as session:
             match = session.get(
                 Match,
