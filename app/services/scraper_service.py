@@ -76,7 +76,7 @@ class ScraperService:
         return fixtures
 
     def _scrape_espn(self, target_date: date) -> List[Dict]:
-        url = f"https://site.api.espn.com/apis/v2/sports/soccer/eng.1/scoreboard?dates={target_date.strftime('%Y%m%d')}"
+        url = f"https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/scoreboard?dates={target_date.strftime('%Y%m%d')}"
         with self.rate_limiter.wait():
             response = requests.get(url, timeout=15)
         response.raise_for_status()
