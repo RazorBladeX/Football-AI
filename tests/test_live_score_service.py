@@ -47,16 +47,22 @@ class _DummyMatchService:
 
 class LiveScoreServiceTests(unittest.TestCase):
     @patch("app.services.live_score_service.load_settings", return_value={"scrape_days_ahead": "1"})
-    @patch("app.services.live_score_service.time.time", return_value=0)
-    def test_refresh_window_respects_horizon(self, mock_time, _mock_settings):
+    @patch("app.services.live_score_service.date")
+    def test_refresh_window_respects_horizon(self, mock_date, _mock_settings):
+        class _FakeDate(date):
+            @classmethod
+            def fromtimestamp(cls, _ts):
+                return date(2000, 1, 1)
+
+        mock_date.fromtimestamp.side_effect = _FakeDate.fromtimestamp
         scraper = _DummyScraper()
         service = LiveScoreService(scraper, _DummyMatchService())
 
         service.refresh_window()
 
         self.assertEqual(len(scraper.calls), 2)
-        self.assertEqual(scraper.calls[0], date(1970, 1, 1))
-        self.assertEqual(scraper.calls[1], date(1970, 1, 2))
+        self.assertEqual(scraper.calls[0], date(2000, 1, 1))
+        self.assertEqual(scraper.calls[1], date(2000, 1, 2))
 
 
 if __name__ == "__main__":

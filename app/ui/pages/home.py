@@ -245,7 +245,6 @@ class HomePage(QWidget):
         layout.addLayout(teams_row)
         layout.addLayout(meta_row)
         card.setLayout(layout)
-        card.mousePressEvent = lambda _event, m=match: self._emit_match_selection(m)  # type: ignore
         return card
 
     def _emit_match_selection(self, match: dict) -> None:

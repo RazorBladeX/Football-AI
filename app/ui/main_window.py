@@ -210,14 +210,15 @@ class MainWindow(QMainWindow):
     def _safe_refresh(self):
         qdate = self.date_picker.date()
         selected_date = qdate.toPython() if hasattr(qdate, "toPython") else qdate.toPyDate()
-        self.stack.setCurrentWidget(self.home_page)
-        self.sidebar.setCurrentRow(0)
         try:
             self.refresh_matches(selected_date)
+            self.stack.setCurrentWidget(self.home_page)
+            self.sidebar.setCurrentRow(0)
         except Exception as exc:
             logging.getLogger(__name__).error("Refresh failed: %s", exc)
-            self.home_page.show_empty_state(selected_date, str(exc))
-            self.predictions_page.reload_matches(selected_date)
+            if self.stack.currentWidget() is self.home_page:
+                self.home_page.show_empty_state(selected_date, str(exc))
+                self.predictions_page.reload_matches(selected_date)
             self.last_updated.setText(f"Sync failed · {selected_date.strftime('%b %d')}")
 
     def _on_date_change(self, target: QDate) -> None:
@@ -231,23 +232,42 @@ class MainWindow(QMainWindow):
         current_date = current_qdate.toPython() if hasattr(current_qdate, "toPython") else current_qdate.toPyDate()
         window_rows: Optional[List[dict]] = None
         end_date = today + timedelta(days=days_ahead)
+        failed_dates: List[date] = []
+        today_rows: Optional[List[dict]] = None
         for offset in range(days_ahead + 1):
             target_date = today + timedelta(days=offset)
-            fixtures = self.scraper_service.get_fixtures(target_date)
-            rows = self._ingest_fixtures(fixtures)
-            aggregated += len(rows)
-            if target_date == current_date:
-                window_rows = rows
+            try:
+                fixtures = self.scraper_service.get_fixtures(target_date)
+                rows = self._ingest_fixtures(fixtures)
+                aggregated += len(rows)
+                if offset == 0:
+                    today_rows = rows
+                if target_date == current_date:
+                    window_rows = rows
+            except Exception as exc:
+                logging.getLogger(__name__).error("Sync failed for %s: %s", target_date.isoformat(), exc)
+                failed_dates.append(target_date)
+                continue
         if window_rows is not None:
             self.current_date = current_date
             self.home_page.load_matches(window_rows, current_date)
             self.predictions_page.reload_matches(current_date)
-        self.last_updated.setText(f"Synced {aggregated} fixtures · through {end_date.strftime('%b %d')}")
+        elif today_rows is not None:
+            self.current_date = today
+            self.date_picker.setDate(QDate.currentDate())
+            self.home_page.load_matches(today_rows, today)
+            self.predictions_page.reload_matches(today)
+        if not failed_dates:
+            self.last_updated.setText(f"Synced {aggregated} fixtures · through {end_date.strftime('%b %d')}")
+        else:
+            failed_str = ", ".join(d.strftime("%b %d") for d in failed_dates)
+            self.last_updated.setText(
+                f"Synced {aggregated} fixtures · through {end_date.strftime('%b %d')} (failed: {failed_str})"
+            )
 
     def _open_match_detail(self, match: dict) -> None:
         self.match_detail_page.set_match_data(match)
         self.stack.setCurrentWidget(self.match_detail_page)
-        self.sidebar.setCurrentRow(0)
 
     def _back_to_home(self) -> None:
         self.stack.setCurrentWidget(self.home_page)

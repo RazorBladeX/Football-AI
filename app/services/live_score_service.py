@@ -40,6 +40,14 @@ class LiveScoreService:
             time.sleep(settings.refresh_interval_seconds)
 
     def refresh_today(self) -> None:
+        """Refresh only today's fixtures.
+
+        Note:
+            This method always refreshes just the current day and does not
+            use the user-configured ``scrape_days_ahead`` setting. The
+            background loop calls ``refresh_window()`` without a fixed
+            horizon, so it will use the configured window when available.
+        """
         self.refresh_window(days_ahead=0)
 
     def refresh_window(self, days_ahead: int | None = None) -> None:
