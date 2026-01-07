@@ -165,6 +165,7 @@ class HomePage(QWidget):
         self._render_chart(status_counts)
         self._update_metrics(status_counts)
         if rows:
+            self.table.selectRow(0)
             self._set_detail(rows[0])
 
     def _render_chart(self, status_counts: dict) -> None:

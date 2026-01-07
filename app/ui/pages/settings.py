@@ -51,7 +51,7 @@ class SettingsPage(QWidget):
         self.refresh.setRange(1, 120)
         default_refresh = int(DEFAULT_SETTINGS.get("refresh_interval_minutes", "15"))
         try:
-            self.refresh.setValue(int(self.settings.get("refresh_interval_minutes", default_refresh)))
+            self.refresh.setValue(int(self.settings.get("refresh_interval_minutes", str(default_refresh))))
         except (TypeError, ValueError):
             self.refresh.setValue(default_refresh)
 
