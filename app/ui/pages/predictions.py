@@ -3,6 +3,7 @@ from datetime import date
 from PySide6.QtWidgets import (
     QComboBox,
     QFrame,
+    QHBoxLayout,
     QLabel,
     QListWidget,
     QPushButton,
@@ -21,9 +22,9 @@ class PredictionsPage(QWidget):
         self.match_service = match_service
 
         self.header = QLabel("AI Predictions")
-        self.header.setStyleSheet("font-size: 18px; font-weight: 700;")
+        self.header.setStyleSheet("font-size: 20px; font-weight: 800;")
         self.description = QLabel(
-            "Select a match and generate on-device predictions. Recent predictions are kept locally for quick recall."
+            "Pick a match and spin up on-device predictions. Feels like a Discord command palette, stores locally."
         )
         self.description.setWordWrap(True)
         self.description.setObjectName("muted")
@@ -35,26 +36,40 @@ class PredictionsPage(QWidget):
         self.status_label = QLabel("Pick a match to begin.")
         self.status_label.setObjectName("muted")
 
+        hero_card = QFrame()
+        hero_card.setObjectName("card")
+        hero_layout = QVBoxLayout()
+        hero_layout.setSpacing(8)
+        hero_layout.addWidget(self.header)
+        hero_layout.addWidget(self.description)
+        hero_card.setLayout(hero_layout)
+
         form_card = QFrame()
-        form_card.setObjectName("card")
+        form_card.setObjectName("panel")
         form_layout = QVBoxLayout()
-        form_layout.addWidget(self.header)
-        form_layout.addWidget(self.description)
+        form_layout.setSpacing(12)
+        form_layout.addWidget(QLabel("Match"))
         form_layout.addWidget(self.match_select)
         form_layout.addWidget(self.generate_button)
         form_layout.addWidget(self.status_label)
         form_card.setLayout(form_layout)
 
         list_card = QFrame()
-        list_card.setObjectName("card")
+        list_card.setObjectName("panel")
         list_layout = QVBoxLayout()
         list_layout.addWidget(QLabel("Saved Predictions"))
         list_layout.addWidget(self.list_widget)
         list_card.setLayout(list_layout)
 
+        row = QHBoxLayout()
+        row.setSpacing(14)
+        row.addWidget(form_card, 1)
+        row.addWidget(list_card, 1)
+
         layout = QVBoxLayout()
-        layout.addWidget(form_card)
-        layout.addWidget(list_card)
+        layout.setSpacing(12)
+        layout.addWidget(hero_card)
+        layout.addLayout(row)
         self.setLayout(layout)
 
         self.reload_matches(date.today())

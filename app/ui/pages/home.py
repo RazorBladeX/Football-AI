@@ -1,4 +1,5 @@
-from typing import List
+from typing import List, Optional
+from datetime import datetime
 
 import matplotlib
 
@@ -8,8 +9,10 @@ from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from PySide6.QtWidgets import (
     QFrame,
     QGridLayout,
+    QHBoxLayout,
     QLabel,
     QHeaderView,
+    QPushButton,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
@@ -25,6 +28,7 @@ class HomePage(QWidget):
         super().__init__()
         self.match_service = match_service
         self.prediction_service = prediction_service
+        self.rows: List[dict] = []
 
         self.table = QTableWidget()
         self.table.setColumnCount(6)
@@ -33,32 +37,113 @@ class HomePage(QWidget):
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.table.setAlternatingRowColors(True)
         self.table.setShowGrid(False)
+        self.table.verticalHeader().setVisible(False)
+        self.table.cellClicked.connect(self._on_row_selected)
 
         self.status_label = QLabel("Today's fixtures")
-        self.status_label.setStyleSheet("font-size: 18px; font-weight: 700;")
+        self.status_label.setStyleSheet("font-size: 20px; font-weight: 800;")
         self.sub_status = QLabel("Live English football pulse, refreshed frequently.")
         self.sub_status.setObjectName("muted")
 
-        self.figure = Figure(figsize=(4, 2), facecolor="#111827")
+        self.figure = Figure(figsize=(4, 2), facecolor="#0f172a")
         self.canvas = FigureCanvasQTAgg(self.figure)
 
         self.metrics = self._build_metrics_row()
 
-        card = QFrame()
-        card.setObjectName("card")
-        card_layout = QVBoxLayout()
-        card_layout.addWidget(self.status_label)
-        card_layout.addWidget(self.sub_status)
-        card_layout.addLayout(self.metrics)
-        card_layout.addWidget(self.table)
-        card_layout.addWidget(self.canvas)
-        card.setLayout(card_layout)
+        hero_card = QFrame()
+        hero_card.setObjectName("card")
+        hero_layout = QVBoxLayout()
+        hero_layout.setSpacing(10)
+        hero_layout.addWidget(self.status_label)
+        hero_layout.addWidget(self.sub_status)
+        hero_layout.addLayout(self.metrics)
+        hero_card.setLayout(hero_layout)
+
+        table_card = QFrame()
+        table_card.setObjectName("panel")
+        table_layout = QVBoxLayout()
+        table_title = QLabel("Fixture grid")
+        table_title.setStyleSheet("font-size: 16px; font-weight: 700;")
+        table_subtitle = QLabel("Sortable, modern list of the matches we hydrated from ESPN/BBC.")
+        table_subtitle.setObjectName("muted")
+        table_layout.addWidget(table_title)
+        table_layout.addWidget(table_subtitle)
+        table_layout.addWidget(self.table)
+        table_card.setLayout(table_layout)
+
+        chart_card = QFrame()
+        chart_card.setObjectName("panel")
+        chart_layout = QVBoxLayout()
+        chart_title = QLabel("Status mix")
+        chart_title.setStyleSheet("font-size: 16px; font-weight: 700;")
+        chart_subtitle = QLabel("Quick glance of live vs finished vs upcoming fixtures.")
+        chart_subtitle.setObjectName("muted")
+        chart_layout.addWidget(chart_title)
+        chart_layout.addWidget(chart_subtitle)
+        chart_layout.addWidget(self.canvas)
+        chart_card.setLayout(chart_layout)
+
+        self.detail_card = QFrame()
+        self.detail_card.setObjectName("panel")
+        detail_layout = QVBoxLayout()
+        self.detail_heading = QLabel("Match details")
+        self.detail_heading.setStyleSheet("font-size: 16px; font-weight: 700;")
+        self.detail_sub = QLabel("Click a game to view the live card, similar to FotMob.")
+        self.detail_sub.setObjectName("muted")
+
+        self.teams_label = QLabel("No match selected")
+        self.teams_label.setStyleSheet("font-size: 18px; font-weight: 800;")
+        self.league_label = QLabel("")
+        self.league_label.setObjectName("muted")
+
+        self.status_chip = QFrame()
+        self.status_chip.setObjectName("pill")
+        chip_layout = QHBoxLayout()
+        chip_layout.setContentsMargins(10, 6, 10, 6)
+        chip_layout.addWidget(QLabel("Status"))
+        self.status_value = QLabel("-")
+        chip_layout.addWidget(self.status_value)
+        chip_layout.addStretch()
+        self.status_chip.setLayout(chip_layout)
+
+        self.score_label = QLabel("")
+        self.score_label.setStyleSheet("font-size: 28px; font-weight: 800;")
+        self.kickoff_label = QLabel("")
+        self.kickoff_label.setObjectName("muted")
+
+        quick_row = QHBoxLayout()
+        quick_row.setSpacing(10)
+        quick_row.addWidget(self.status_chip)
+        quick_row.addStretch()
+
+        detail_layout.addWidget(self.detail_heading)
+        detail_layout.addWidget(self.detail_sub)
+        detail_layout.addLayout(quick_row)
+        detail_layout.addWidget(self.teams_label)
+        detail_layout.addWidget(self.score_label)
+        detail_layout.addWidget(self.league_label)
+        detail_layout.addWidget(self.kickoff_label)
+        detail_layout.addStretch()
+
+        self.detail_card.setLayout(detail_layout)
+
+        grid = QGridLayout()
+        grid.setSpacing(14)
+        grid.addWidget(table_card, 0, 0, 1, 2)
+        grid.addWidget(self.detail_card, 0, 2, 1, 1)
+        grid.addWidget(chart_card, 1, 0, 1, 3)
+        grid.setColumnStretch(0, 3)
+        grid.setColumnStretch(1, 0)
+        grid.setColumnStretch(2, 2)
 
         layout = QVBoxLayout()
-        layout.addWidget(card)
+        layout.setSpacing(14)
+        layout.addWidget(hero_card)
+        layout.addLayout(grid)
         self.setLayout(layout)
 
     def load_matches(self, rows: List[dict], target_date) -> None:
+        self.rows = rows
         self.table.setRowCount(len(rows))
         for i, match in enumerate(rows):
             self.table.setItem(i, 0, QTableWidgetItem(match.get("league", "")))
@@ -79,6 +164,7 @@ class HomePage(QWidget):
         status_counts = self._count_statuses(rows)
         self._render_chart(status_counts)
         self._update_metrics(status_counts)
+        self._reset_detail()
 
     def _render_chart(self, status_counts: dict) -> None:
         self.figure.clear()
@@ -127,3 +213,45 @@ class HomePage(QWidget):
                 continue
             status_counts[status] += 1
         return status_counts
+
+    def _on_row_selected(self, row: int, _col: int) -> None:
+        if 0 <= row < len(self.rows):
+            self._set_detail(self.rows[row])
+
+    def _set_detail(self, match: dict) -> None:
+        home = match.get("home", "")
+        away = match.get("away", "")
+        self.teams_label.setText(f"{home} vs {away}")
+        status = match.get("status", "upcoming").title()
+        self.status_value.setText(status)
+        score = "-"
+        if match.get("home_score") is not None and match.get("away_score") is not None:
+            score = f"{match['home_score']} - {match['away_score']}"
+        self.score_label.setText(score if score != "-" else "Awaiting kickoff")
+        league = match.get("league", "")
+        self.league_label.setText(f"Competition · {league}")
+        kickoff_display = self._format_kickoff_time(match.get("kickoff"))
+        self.kickoff_label.setText(f"Kickoff · {kickoff_display}")
+
+    def _format_kickoff_time(self, kickoff_raw: Optional[str]) -> str:
+        if not kickoff_raw:
+            return "TBD"
+        if isinstance(kickoff_raw, str):
+            candidates = [kickoff_raw]
+            if kickoff_raw.endswith("Z"):
+                candidates.append(kickoff_raw[:-1] + "+00:00")
+            for candidate in candidates:
+                try:
+                    parsed = datetime.fromisoformat(candidate)
+                    return parsed.strftime("%b %d, %H:%M")
+                except ValueError:
+                    continue
+            return str(kickoff_raw)
+        return str(kickoff_raw)
+
+    def _reset_detail(self) -> None:
+        self.teams_label.setText("No match selected")
+        self.status_value.setText("-")
+        self.score_label.setText("")
+        self.league_label.setText("")
+        self.kickoff_label.setText("Kickoff · TBD")
