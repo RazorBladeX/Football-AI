@@ -1,5 +1,6 @@
-from datetime import date
 import logging
+from datetime import date, timedelta
+from typing import List, Optional
 
 from PySide6.QtCore import QDate
 from PySide6.QtWidgets import (
@@ -23,6 +24,7 @@ from app.services.prediction_service import PredictionService
 from app.services.scraper_service import ScraperService
 from app.database.db import get_session
 from app.ui.pages.home import HomePage
+from app.ui.pages.match_detail import MatchDetailPage
 from app.ui.pages.predictions import PredictionsPage
 from app.ui.pages.settings import SettingsPage
 
@@ -42,6 +44,7 @@ class MainWindow(QMainWindow):
         self.prediction_service = prediction_service
         self.scraper_service = scraper_service
         self.live_service = live_service
+        self.current_date = date.today()
 
         self.date_picker = QDateEdit(QDate.currentDate())
         self.date_picker.setCalendarPopup(True)
@@ -59,10 +62,14 @@ class MainWindow(QMainWindow):
         self.stack = QStackedWidget()
         self.home_page = HomePage(match_service, prediction_service)
         self.predictions_page = PredictionsPage(prediction_service, match_service)
-        self.settings_page = SettingsPage()
+        self.match_detail_page = MatchDetailPage()
+        self.match_detail_page.back_requested.connect(self._back_to_home)
+        self.settings_page = SettingsPage(sync_callback=self._sync_range)
+        self.home_page.match_selected.connect(self._open_match_detail)
         self.stack.addWidget(self.home_page)
         self.stack.addWidget(self.predictions_page)
         self.stack.addWidget(self.settings_page)
+        self.stack.addWidget(self.match_detail_page)
 
         refresh_button = QPushButton("Refresh data")
         refresh_button.clicked.connect(self._safe_refresh)
@@ -172,9 +179,17 @@ class MainWindow(QMainWindow):
     def _on_nav_change(self, index: int) -> None:
         self.stack.setCurrentIndex(index)
 
-    def refresh_matches(self, target_date: date) -> None:
+    def refresh_matches(self, target_date: date) -> list[dict]:
         fixtures = self.scraper_service.get_fixtures(target_date)
-        rows = []
+        rows = self._ingest_fixtures(fixtures)
+        self.current_date = target_date
+        self.home_page.load_matches(rows, target_date)
+        self.predictions_page.reload_matches(target_date)
+        self.last_updated.setText(f"Synced {len(rows)} fixtures · {target_date.strftime('%b %d')}")
+        return rows
+
+    def _ingest_fixtures(self, fixtures: list[dict]) -> list[dict]:
+        rows: list[dict] = []
         with get_session() as session:
             for item in fixtures:
                 league = self.match_service.ensure_league(item["league"], tier=1, session=session)
@@ -190,17 +205,70 @@ class MainWindow(QMainWindow):
                     away_score=item.get("away_score"),
                 )
                 rows.append(item)
-        self.home_page.load_matches(rows, target_date)
-        self.predictions_page.reload_matches(target_date)
-        self.last_updated.setText(f"Synced {len(rows)} fixtures · {target_date.strftime('%b %d')}")
+        return rows
 
     def _safe_refresh(self):
         qdate = self.date_picker.date()
         selected_date = qdate.toPython() if hasattr(qdate, "toPython") else qdate.toPyDate()
         try:
             self.refresh_matches(selected_date)
+            self.stack.setCurrentWidget(self.home_page)
+            self.sidebar.setCurrentRow(0)
         except Exception as exc:
             logging.getLogger(__name__).error("Refresh failed: %s", exc)
+            if self.stack.currentWidget() is self.home_page:
+                self.home_page.show_empty_state(selected_date, str(exc))
+                self.predictions_page.reload_matches(selected_date)
+            self.last_updated.setText(f"Sync failed · {selected_date.strftime('%b %d')}")
 
     def _on_date_change(self, target: QDate) -> None:
         self._safe_refresh()
+
+    def _sync_range(self, days_ahead: int) -> None:
+        """Sync fixtures for today and the requested horizon, persisting to the local DB."""
+        aggregated = 0
+        today = date.today()
+        current_qdate = self.date_picker.date()
+        current_date = current_qdate.toPython() if hasattr(current_qdate, "toPython") else current_qdate.toPyDate()
+        window_rows: Optional[List[dict]] = None
+        end_date = today + timedelta(days=days_ahead)
+        failed_dates: List[date] = []
+        today_rows: Optional[List[dict]] = None
+        for offset in range(days_ahead + 1):
+            target_date = today + timedelta(days=offset)
+            try:
+                fixtures = self.scraper_service.get_fixtures(target_date)
+                rows = self._ingest_fixtures(fixtures)
+                aggregated += len(rows)
+                if offset == 0:
+                    today_rows = rows
+                if target_date == current_date:
+                    window_rows = rows
+            except Exception as exc:
+                logging.getLogger(__name__).error("Sync failed for %s: %s", target_date.isoformat(), exc)
+                failed_dates.append(target_date)
+                continue
+        if window_rows is not None:
+            self.current_date = current_date
+            self.home_page.load_matches(window_rows, current_date)
+            self.predictions_page.reload_matches(current_date)
+        elif today_rows is not None:
+            self.current_date = today
+            self.date_picker.setDate(QDate.currentDate())
+            self.home_page.load_matches(today_rows, today)
+            self.predictions_page.reload_matches(today)
+        if not failed_dates:
+            self.last_updated.setText(f"Synced {aggregated} fixtures · through {end_date.strftime('%b %d')}")
+        else:
+            failed_str = ", ".join(d.strftime("%b %d") for d in failed_dates)
+            self.last_updated.setText(
+                f"Synced {aggregated} fixtures · through {end_date.strftime('%b %d')} (failed: {failed_str})"
+            )
+
+    def _open_match_detail(self, match: dict) -> None:
+        self.match_detail_page.set_match_data(match)
+        self.stack.setCurrentWidget(self.match_detail_page)
+
+    def _back_to_home(self) -> None:
+        self.stack.setCurrentWidget(self.home_page)
+        self.sidebar.setCurrentRow(0)

@@ -6,15 +6,14 @@ import matplotlib
 matplotlib.use("Agg")
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QFrame,
     QGridLayout,
     QHBoxLayout,
     QLabel,
-    QHeaderView,
     QPushButton,
-    QTableWidget,
-    QTableWidgetItem,
+    QScrollArea,
     QVBoxLayout,
     QWidget,
 )
@@ -24,21 +23,13 @@ from app.services.prediction_service import PredictionService
 
 
 class HomePage(QWidget):
+    match_selected = Signal(dict)
+
     def __init__(self, match_service: MatchService, prediction_service: PredictionService):
         super().__init__()
         self.match_service = match_service
         self.prediction_service = prediction_service
         self.rows: List[dict] = []
-
-        self.table = QTableWidget()
-        self.table.setColumnCount(6)
-        self.table.setHorizontalHeaderLabels(["League", "Home", "Away", "Kickoff", "Status", "Score"])
-        self.table.horizontalHeader().setStretchLastSection(True)
-        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.table.setAlternatingRowColors(True)
-        self.table.setShowGrid(False)
-        self.table.verticalHeader().setVisible(False)
-        self.table.cellClicked.connect(self._on_row_selected)
 
         self.status_label = QLabel("Today's fixtures")
         self.status_label.setStyleSheet("font-size: 20px; font-weight: 800;")
@@ -59,17 +50,33 @@ class HomePage(QWidget):
         hero_layout.addLayout(self.metrics)
         hero_card.setLayout(hero_layout)
 
-        table_card = QFrame()
-        table_card.setObjectName("panel")
-        table_layout = QVBoxLayout()
-        table_title = QLabel("Fixture grid")
-        table_title.setStyleSheet("font-size: 16px; font-weight: 700;")
-        table_subtitle = QLabel("Sortable, modern list of the matches we hydrated from ESPN/BBC.")
-        table_subtitle.setObjectName("muted")
-        table_layout.addWidget(table_title)
-        table_layout.addWidget(table_subtitle)
-        table_layout.addWidget(self.table)
-        table_card.setLayout(table_layout)
+        self.cards_layout = QGridLayout()
+        self.cards_layout.setSpacing(12)
+        self.cards_layout.setContentsMargins(0, 0, 0, 0)
+        self.cards_layout.setColumnStretch(0, 1)
+        self.cards_layout.setColumnStretch(1, 1)
+        cards_body = QWidget()
+        cards_body.setLayout(self.cards_layout)
+
+        self.cards_area = QScrollArea()
+        self.cards_area.setWidgetResizable(True)
+        self.cards_area.setObjectName("plain-scroll")
+        self.cards_area.setWidget(cards_body)
+
+        cards_card = QFrame()
+        cards_card.setObjectName("panel")
+        cards_layout = QVBoxLayout()
+        cards_header = QHBoxLayout()
+        cards_title = QLabel("Fixture cards")
+        cards_title.setStyleSheet("font-size: 16px; font-weight: 700;")
+        cards_subtitle = QLabel("Tap a game for the dedicated overview page.")
+        cards_subtitle.setObjectName("muted")
+        cards_header.addWidget(cards_title)
+        cards_header.addStretch()
+        cards_layout.addLayout(cards_header)
+        cards_layout.addWidget(cards_subtitle)
+        cards_layout.addWidget(self.cards_area)
+        cards_card.setLayout(cards_layout)
 
         chart_card = QFrame()
         chart_card.setObjectName("panel")
@@ -83,57 +90,12 @@ class HomePage(QWidget):
         chart_layout.addWidget(self.canvas)
         chart_card.setLayout(chart_layout)
 
-        self.detail_card = QFrame()
-        self.detail_card.setObjectName("panel")
-        detail_layout = QVBoxLayout()
-        self.detail_heading = QLabel("Match details")
-        self.detail_heading.setStyleSheet("font-size: 16px; font-weight: 700;")
-        self.detail_sub = QLabel("Click a game to view the live card, similar to FotMob.")
-        self.detail_sub.setObjectName("muted")
-
-        self.teams_label = QLabel("No match selected")
-        self.teams_label.setStyleSheet("font-size: 18px; font-weight: 800;")
-        self.league_label = QLabel("")
-        self.league_label.setObjectName("muted")
-
-        self.status_chip = QFrame()
-        self.status_chip.setObjectName("pill")
-        chip_layout = QHBoxLayout()
-        chip_layout.setContentsMargins(10, 6, 10, 6)
-        chip_layout.addWidget(QLabel("Status"))
-        self.status_value = QLabel("-")
-        chip_layout.addWidget(self.status_value)
-        chip_layout.addStretch()
-        self.status_chip.setLayout(chip_layout)
-
-        self.score_label = QLabel("")
-        self.score_label.setStyleSheet("font-size: 28px; font-weight: 800;")
-        self.kickoff_label = QLabel("")
-        self.kickoff_label.setObjectName("muted")
-
-        quick_row = QHBoxLayout()
-        quick_row.setSpacing(10)
-        quick_row.addWidget(self.status_chip)
-        quick_row.addStretch()
-
-        detail_layout.addWidget(self.detail_heading)
-        detail_layout.addWidget(self.detail_sub)
-        detail_layout.addLayout(quick_row)
-        detail_layout.addWidget(self.teams_label)
-        detail_layout.addWidget(self.score_label)
-        detail_layout.addWidget(self.league_label)
-        detail_layout.addWidget(self.kickoff_label)
-        detail_layout.addStretch()
-
-        self.detail_card.setLayout(detail_layout)
-
         grid = QGridLayout()
         grid.setSpacing(14)
-        grid.addWidget(table_card, 0, 0, 1, 2)
-        grid.addWidget(self.detail_card, 0, 2, 1, 1)
-        grid.addWidget(chart_card, 1, 0, 1, 3)
+        grid.addWidget(cards_card, 0, 0, 2, 2)
+        grid.addWidget(chart_card, 0, 2, 1, 1)
         grid.setColumnStretch(0, 3)
-        grid.setColumnStretch(1, 0)
+        grid.setColumnStretch(1, 3)
         grid.setColumnStretch(2, 2)
 
         layout = QVBoxLayout()
@@ -144,27 +106,17 @@ class HomePage(QWidget):
 
     def load_matches(self, rows: List[dict], target_date) -> None:
         self.rows = rows
-        self.table.setRowCount(len(rows))
-        for i, match in enumerate(rows):
-            self.table.setItem(i, 0, QTableWidgetItem(match.get("league", "")))
-            self.table.setItem(i, 1, QTableWidgetItem(match.get("home", "")))
-            self.table.setItem(i, 2, QTableWidgetItem(match.get("away", "")))
-            kickoff_raw = match.get("kickoff")
-            kickoff_display = kickoff_raw or "-"
-            if isinstance(kickoff_raw, str):
-                kickoff_display = kickoff_raw.replace("T", " ").replace("Z", "")
-            self.table.setItem(i, 3, QTableWidgetItem(kickoff_display))
-            self.table.setItem(i, 4, QTableWidgetItem(match.get("status", "").title()))
-            score = "-"
-            if match.get("home_score") is not None and match.get("away_score") is not None:
-                score = f"{match['home_score']} - {match['away_score']}"
-            self.table.setItem(i, 5, QTableWidgetItem(score))
+        self._clear_cards()
+        if not rows:
+            self._show_empty_message("No fixtures available for this date.")
+        for idx, match in enumerate(rows):
+            card = self._build_match_card(match)
+            self.cards_layout.addWidget(card, idx // 2, idx % 2)
         self.status_label.setText(f"Loaded {len(rows)} fixtures")
         self.sub_status.setText(f"Viewing fixtures for {target_date.strftime('%b %d, %Y')}")
         status_counts = self._count_statuses(rows)
         self._render_chart(status_counts)
         self._update_metrics(status_counts)
-        self._reset_detail()
 
     def _render_chart(self, status_counts: dict) -> None:
         self.figure.clear()
@@ -214,24 +166,94 @@ class HomePage(QWidget):
             status_counts[status] += 1
         return status_counts
 
-    def _on_row_selected(self, row: int, _col: int) -> None:
-        if 0 <= row < len(self.rows):
-            self._set_detail(self.rows[row])
+    def _clear_cards(self) -> None:
+        while self.cards_layout.count():
+            item = self.cards_layout.takeAt(0)
+            widget = item.widget()
+            if widget:
+                widget.deleteLater()
 
-    def _set_detail(self, match: dict) -> None:
-        home = match.get("home", "")
-        away = match.get("away", "")
-        self.teams_label.setText(f"{home} vs {away}")
-        status = match.get("status", "upcoming").title()
-        self.status_value.setText(status)
-        score = "-"
-        if match.get("home_score") is not None and match.get("away_score") is not None:
-            score = f"{match['home_score']} - {match['away_score']}"
-        self.score_label.setText(score if score != "-" else "Awaiting kickoff")
-        league = match.get("league", "")
-        self.league_label.setText(f"Competition · {league}")
-        kickoff_display = self._format_kickoff_time(match.get("kickoff"))
-        self.kickoff_label.setText(f"Kickoff · {kickoff_display}")
+    def _show_empty_message(self, message: str) -> None:
+        placeholder = QLabel(message)
+        placeholder.setObjectName("muted")
+        placeholder.setAlignment(Qt.AlignCenter)
+        placeholder_card = QFrame()
+        placeholder_card.setObjectName("panel")
+        placeholder_layout = QVBoxLayout()
+        placeholder_layout.addWidget(placeholder)
+        placeholder_card.setLayout(placeholder_layout)
+        self.cards_layout.addWidget(placeholder_card, 0, 0, 1, 2)
+
+    def show_empty_state(self, target_date, reason: Optional[str] = None) -> None:
+        self.rows = []
+        self._clear_cards()
+        detail = reason or "No data returned by providers."
+        self._show_empty_message(detail)
+        self.status_label.setText("No fixtures found")
+        self.sub_status.setText(f"{target_date.strftime('%b %d, %Y')} · {detail}")
+        self._render_chart({"live": 0, "finished": 0, "upcoming": 0})
+        self._update_metrics({})
+
+    def _build_match_card(self, match: dict) -> QFrame:
+        card = QFrame()
+        card.setObjectName("panel")
+        layout = QVBoxLayout()
+        layout.setSpacing(8)
+
+        header = QHBoxLayout()
+        league_label = QLabel(match.get("league", "Unknown"))
+        league_label.setObjectName("muted")
+        status_chip = QFrame()
+        status_chip.setObjectName("pill")
+        status_layout = QHBoxLayout()
+        status_layout.setContentsMargins(10, 6, 10, 6)
+        status_layout.setSpacing(6)
+        status_label = QLabel(match.get("status", "upcoming").title())
+        status_layout.addWidget(status_label)
+        status_chip.setLayout(status_layout)
+        header.addWidget(league_label)
+        header.addStretch()
+        header.addWidget(status_chip)
+
+        teams_row = QHBoxLayout()
+        teams_row.setSpacing(6)
+        home = QLabel(match.get("home", "Home"))
+        home.setStyleSheet("font-size: 16px; font-weight: 800;")
+        away = QLabel(match.get("away", "Away"))
+        away.setStyleSheet("font-size: 16px; font-weight: 800;")
+        vs = QLabel("vs")
+        vs.setObjectName("muted")
+        score = QLabel(self._format_score(match))
+        score.setStyleSheet("font-size: 22px; font-weight: 800;")
+        teams_row.addWidget(home)
+        teams_row.addWidget(vs)
+        teams_row.addWidget(away)
+        teams_row.addStretch()
+        teams_row.addWidget(score)
+
+        meta_row = QHBoxLayout()
+        kickoff_label = QLabel(f"Kickoff · {self._format_kickoff_time(match.get('kickoff'))}")
+        kickoff_label.setObjectName("muted")
+        meta_row.addWidget(kickoff_label)
+        meta_row.addStretch()
+        open_button = QPushButton("Open match")
+        open_button.setObjectName("ghost")
+        open_button.clicked.connect(lambda _=None, m=match: self._emit_match_selection(m))
+        meta_row.addWidget(open_button)
+
+        layout.addLayout(header)
+        layout.addLayout(teams_row)
+        layout.addLayout(meta_row)
+        card.setLayout(layout)
+        return card
+
+    def _emit_match_selection(self, match: dict) -> None:
+        self.match_selected.emit(match)
+
+    def _format_score(self, match: dict) -> str:
+        if match.get("home_score") is None or match.get("away_score") is None:
+            return "–"
+        return f"{match['home_score']} - {match['away_score']}"
 
     def _format_kickoff_time(self, kickoff_raw: Optional[str]) -> str:
         if not kickoff_raw:
@@ -248,10 +270,3 @@ class HomePage(QWidget):
                     continue
             return str(kickoff_raw)
         return str(kickoff_raw)
-
-    def _reset_detail(self) -> None:
-        self.teams_label.setText("No match selected")
-        self.status_value.setText("-")
-        self.score_label.setText("")
-        self.league_label.setText("")
-        self.kickoff_label.setText("Kickoff · TBD")

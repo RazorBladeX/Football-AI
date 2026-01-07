@@ -23,9 +23,9 @@ def bootstrap():
     match_service = MatchService()
     prediction_service = PredictionService()
 
-    # Prime database with today's fixtures
+    # Prime database with today's fixtures (and horizon from settings)
     live_service = LiveScoreService(scraper, match_service)
-    live_service.refresh_today()
+    live_service.refresh_window()
     live_service.start()
 
     app = QApplication(sys.argv)
