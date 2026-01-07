@@ -237,12 +237,16 @@ class HomePage(QWidget):
         if not kickoff_raw:
             return "TBD"
         if isinstance(kickoff_raw, str):
-            try:
-                cleaned = kickoff_raw.rstrip("Z") + "+00:00" if kickoff_raw.endswith("Z") else kickoff_raw
-                parsed = datetime.fromisoformat(cleaned)
-                return parsed.strftime("%b %d, %H:%M")
-            except ValueError:
-                return str(kickoff_raw)
+            candidates = [kickoff_raw]
+            if kickoff_raw.endswith("Z"):
+                candidates.append(kickoff_raw[:-1] + "+00:00")
+            for candidate in candidates:
+                try:
+                    parsed = datetime.fromisoformat(candidate)
+                    return parsed.strftime("%b %d, %H:%M")
+                except ValueError:
+                    continue
+            return str(kickoff_raw)
         return str(kickoff_raw)
 
     def _reset_detail(self) -> None:

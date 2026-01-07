@@ -14,6 +14,8 @@ from PySide6.QtWidgets import (
 
 from app.utils.settings_store import DEFAULT_SETTINGS, load_settings, save_settings
 
+FALLBACK_REFRESH_MINUTES = 15
+
 
 class SettingsPage(QWidget):
     def __init__(self):
@@ -54,7 +56,7 @@ class SettingsPage(QWidget):
             raw_refresh = self.settings.get("refresh_interval_minutes", default_refresh_str)
             self.refresh.setValue(int(raw_refresh))
         except (TypeError, ValueError, KeyError):
-            self.refresh.setValue(int(DEFAULT_SETTINGS["refresh_interval_minutes"]))
+            self.refresh.setValue(FALLBACK_REFRESH_MINUTES)
 
         form = QFrame()
         form.setObjectName("panel")

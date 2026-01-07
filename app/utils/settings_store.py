@@ -3,7 +3,8 @@ import logging
 from pathlib import Path
 from typing import Dict
 
-SETTINGS_FILE = Path.home() / ".football_ai_settings.json"
+SETTINGS_DIR = Path.home() / ".config" / "football_ai"
+SETTINGS_FILE = SETTINGS_DIR / "settings.json"
 
 DEFAULT_SETTINGS: Dict[str, str] = {
     "ollama_mode": "cloud",  # cloud | local | remote
@@ -29,6 +30,7 @@ def load_settings() -> Dict[str, str]:
 
 def save_settings(settings: Dict[str, str]) -> None:
     try:
+        SETTINGS_DIR.mkdir(parents=True, exist_ok=True)
         SETTINGS_FILE.write_text(json.dumps(settings, indent=2))
     except (OSError, PermissionError):
         logging.getLogger(__name__).warning("Unable to persist settings to %s", SETTINGS_FILE)
