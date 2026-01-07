@@ -67,7 +67,7 @@ class HomePage(QWidget):
             kickoff = match.get("kickoff") or "-"
             self.table.setItem(i, 3, QTableWidgetItem(kickoff.replace("T", " ").replace("Z", "")))
             self.table.setItem(i, 4, QTableWidgetItem(match.get("status", "").title()))
-            score = "–"
+            score = "-"
             if match.get("home_score") is not None and match.get("away_score") is not None:
                 score = f"{match['home_score']} - {match['away_score']}"
             self.table.setItem(i, 5, QTableWidgetItem(score))
