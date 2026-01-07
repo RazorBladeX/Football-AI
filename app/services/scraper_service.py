@@ -28,10 +28,19 @@ class ScraperService:
     def _scrape_bbc(self, target_date: date) -> List[Dict]:
         url = f"https://www.bbc.co.uk/sport/football/scores-fixtures/{target_date.isoformat()}"
         with self.rate_limiter.wait():
-            response = requests.get(url, timeout=15)
+        response = requests.get(url, timeout=15)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, "html.parser")
         fixtures: List[Dict] = []
+
+        def safe_int(text: str | None) -> int | None:
+            if text is None:
+                return None
+            try:
+                return int(text)
+            except ValueError:
+                return None
+
         for fixture in soup.select("article.gs-o-list-ui__item--flush"):
             league = fixture.find_previous("h3")
             league_name = league.get_text(strip=True) if league else "Unknown"
@@ -49,8 +58,8 @@ class ScraperService:
                     "home": home.get_text(strip=True),
                     "away": away.get_text(strip=True),
                     "status": status_el.get_text(strip=True) if status_el else "upcoming",
-                    "home_score": int(score_home.get_text(strip=True)) if score_home else None,
-                    "away_score": int(score_away.get_text(strip=True)) if score_away else None,
+                    "home_score": safe_int(score_home.get_text(strip=True) if score_home else None),
+                    "away_score": safe_int(score_away.get_text(strip=True) if score_away else None),
                     "kickoff": kickoff["datetime"] if kickoff and kickoff.has_attr("datetime") else None,
                 }
             )
