@@ -20,11 +20,11 @@ def load_settings() -> Dict[str, str]:
         return DEFAULT_SETTINGS.copy()
     try:
         data = json.loads(SETTINGS_FILE.read_text())
-        merged = DEFAULT_SETTINGS.copy()
-        merged.update({k: str(v) for k, v in data.items()})
-        return merged
-    except Exception:
+    except (json.JSONDecodeError, OSError):
         return DEFAULT_SETTINGS.copy()
+    merged = DEFAULT_SETTINGS.copy()
+    merged.update({k: str(v) for k, v in data.items()})
+    return merged
 
 
 def save_settings(settings: Dict[str, str]) -> None:

@@ -231,15 +231,16 @@ class HomePage(QWidget):
         self.score_label.setText(score if score != "-" else "Awaiting kickoff")
         league = match.get("league", "")
         self.league_label.setText(f"Competition · {league}")
-        kickoff_raw = match.get("kickoff")
-        kickoff_display = "TBD"
-        if kickoff_raw:
-            if isinstance(kickoff_raw, str):
-                try:
-                    parsed = datetime.fromisoformat(kickoff_raw.replace("Z", "+00:00"))
-                    kickoff_display = parsed.strftime("%b %d, %H:%M")
-                except ValueError:
-                    kickoff_display = kickoff_raw.replace("T", " ").replace("Z", "")
-            else:
-                kickoff_display = str(kickoff_raw)
+        kickoff_display = self._format_kickoff_time(match.get("kickoff"))
         self.kickoff_label.setText(f"Kickoff · {kickoff_display}")
+
+    def _format_kickoff_time(self, kickoff_raw) -> str:
+        if not kickoff_raw:
+            return "TBD"
+        if isinstance(kickoff_raw, str):
+            try:
+                parsed = datetime.fromisoformat(kickoff_raw.replace("Z", "+00:00"))
+                return parsed.strftime("%b %d, %H:%M")
+            except ValueError:
+                return kickoff_raw.replace("T", " ").replace("Z", "")
+        return str(kickoff_raw)
