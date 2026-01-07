@@ -1,4 +1,5 @@
 import json
+import logging
 from pathlib import Path
 from typing import Dict
 
@@ -30,5 +31,5 @@ def save_settings(settings: Dict[str, str]) -> None:
     try:
         SETTINGS_FILE.write_text(json.dumps(settings, indent=2))
     except (OSError, PermissionError):
-        # Best-effort persistence; ignore write failures to avoid crashing the UI.
+        logging.getLogger(__name__).warning("Unable to persist settings to %s", SETTINGS_FILE)
         return

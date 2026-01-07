@@ -1,4 +1,5 @@
 from typing import List
+from datetime import datetime
 
 import matplotlib
 
@@ -231,7 +232,14 @@ class HomePage(QWidget):
         league = match.get("league", "")
         self.league_label.setText(f"Competition · {league}")
         kickoff_raw = match.get("kickoff")
-        kickoff_display = kickoff_raw or "TBD"
-        if isinstance(kickoff_raw, str):
-            kickoff_display = kickoff_raw.replace("T", " ").replace("Z", "")
+        kickoff_display = "TBD"
+        if kickoff_raw:
+            if isinstance(kickoff_raw, str):
+                try:
+                    parsed = datetime.fromisoformat(kickoff_raw.replace("Z", "+00:00"))
+                    kickoff_display = parsed.strftime("%b %d, %H:%M")
+                except ValueError:
+                    kickoff_display = kickoff_raw.replace("T", " ").replace("Z", "")
+            else:
+                kickoff_display = str(kickoff_raw)
         self.kickoff_label.setText(f"Kickoff · {kickoff_display}")
