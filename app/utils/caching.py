@@ -1,7 +1,7 @@
 import time
 from collections import OrderedDict
 from functools import wraps
-from typing import Any, Callable, Dict, Tuple
+from typing import Callable
 
 
 def ttl_cache(ttl_seconds: int = 60):
@@ -12,7 +12,10 @@ def ttl_cache(ttl_seconds: int = 60):
 
         @wraps(func)
         def wrapper(*args, **kwargs):
-            key = (args, tuple(sorted(kwargs.items())))
+            try:
+                key = (args, tuple(sorted(kwargs.items())))
+            except TypeError:
+                return func(*args, **kwargs)
             now = time.time()
             if key in cache:
                 expires_at, value = cache.pop(key)

@@ -62,8 +62,8 @@ class HomePage(QWidget):
             status = m.get("status", "upcoming").lower()
             if status not in status_counts:
                 status_counts["upcoming"] += 1
-            else:
-                status_counts[status] += 1
+                continue
+            status_counts[status] += 1
         self.figure.clear()
         ax = self.figure.add_subplot(111)
         bars = list(status_counts.keys())

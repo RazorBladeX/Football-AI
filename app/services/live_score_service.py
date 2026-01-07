@@ -28,7 +28,7 @@ class LiveScoreService:
     def stop(self) -> None:
         self._running = False
         if self._thread:
-            self._thread.join(timeout=1)
+            self._thread.join(timeout=5)
 
     def _run_loop(self) -> None:
         while self._running:
@@ -42,21 +42,24 @@ class LiveScoreService:
         today = date.fromtimestamp(time.time())
         fixtures = self.scraper.get_fixtures(today)
         for item in fixtures:
-            league = self.matches.ensure_league(item["league"], tier=1)
-            home = self.matches.ensure_team(item["home"], league)
-            away = self.matches.ensure_team(item["away"], league)
-            kickoff = None
-            if item.get("kickoff"):
-                kickoff = datetime.fromisoformat(item["kickoff"].replace("Z", "+00:00"))
-            status = item.get("status", "upcoming").lower()
-            if status in {"live", "in progress"}:
-                status = "live"
-            self.matches.upsert_match(
-                league=league,
-                home_team=home,
-                away_team=away,
-                kickoff=kickoff or utc_now(),
-                status=status,
-                home_score=item.get("home_score"),
-                away_score=item.get("away_score"),
-            )
+            try:
+                league = self.matches.ensure_league(item["league"], tier=1)
+                home = self.matches.ensure_team(item["home"], league)
+                away = self.matches.ensure_team(item["away"], league)
+                kickoff = None
+                if item.get("kickoff"):
+                    kickoff = datetime.fromisoformat(item["kickoff"].replace("Z", "+00:00"))
+                status = item.get("status", "upcoming").lower()
+                if status in {"live", "in progress"}:
+                    status = "live"
+                self.matches.upsert_match(
+                    league=league,
+                    home_team=home,
+                    away_team=away,
+                    kickoff=kickoff,
+                    status=status,
+                    home_score=item.get("home_score"),
+                    away_score=item.get("away_score"),
+                )
+            except Exception as exc:
+                logger.warning("Skipping fixture due to error: %s", exc)

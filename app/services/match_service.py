@@ -12,25 +12,39 @@ from app.utils.datetime_utils import to_local
 
 
 class MatchService:
-    def ensure_league(self, name: str, tier: int = 1) -> League:
-        with get_session() as session:
-            league = session.execute(select(League).where(League.name == name)).scalar_one_or_none()
-            if league:
-                return league
-            league = League(name=name, tier=tier)
-            session.add(league)
-            session.flush()
+    def ensure_league(self, name: str, tier: int = 1, session=None) -> League:
+        own_session = session is None
+        ctx = get_session() if own_session else None
+        sess = ctx.__enter__() if ctx else session
+        try:
+            league = sess.execute(select(League).where(League.name == name)).scalar_one_or_none()
+            if not league:
+                league = League(name=name, tier=tier)
+                sess.add(league)
+                sess.flush()
+            sess.refresh(league)
+            sess.expunge(league)
             return league
+        finally:
+            if ctx:
+                ctx.__exit__(None, None, None)
 
-    def ensure_team(self, name: str, league: League) -> Team:
-        with get_session() as session:
-            team = session.execute(select(Team).where(Team.name == name)).scalar_one_or_none()
-            if team:
-                return team
-            team = Team(name=name, league_id=league.id)
-            session.add(team)
-            session.flush()
+    def ensure_team(self, name: str, league: League, session=None) -> Team:
+        own_session = session is None
+        ctx = get_session() if own_session else None
+        sess = ctx.__enter__() if ctx else session
+        try:
+            team = sess.execute(select(Team).where(Team.name == name)).scalar_one_or_none()
+            if not team:
+                team = Team(name=name, league_id=league.id)
+                sess.add(team)
+                sess.flush()
+            sess.refresh(team)
+            sess.expunge(team)
             return team
+        finally:
+            if ctx:
+                ctx.__exit__(None, None, None)
 
     def upsert_match(
         self,
@@ -71,22 +85,21 @@ class MatchService:
                 match.home_score = home_score
                 match.away_score = away_score
                 match.venue = venue
+                match.kickoff_utc = kickoff
+                match.kickoff_local = to_local(kickoff) if kickoff else None
             session.flush()
+            session.refresh(match)
+            session.expunge(match)
             return match
 
     def list_matches_for_date(self, target_date: date) -> List[Match]:
         start = datetime.combine(target_date, datetime.min.time())
         end = datetime.combine(target_date, datetime.max.time())
         with get_session() as session:
-            return (
-                session.execute(
-                    select(Match)
-                    .where(Match.kickoff_utc >= start, Match.kickoff_utc <= end)
-                    .order_by(Match.kickoff_utc)
-                )
-                .scalars()
-                .all()
-            )
+            base_query = select(Match).where(Match.kickoff_utc >= start, Match.kickoff_utc <= end)
+            matches = session.execute(base_query).scalars().all()
+            matches += session.execute(select(Match).where(Match.kickoff_utc.is_(None))).scalars().all()
+            return matches
 
     def live_matches(self) -> List[Match]:
         with get_session() as session:

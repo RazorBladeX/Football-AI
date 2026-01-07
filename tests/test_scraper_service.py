@@ -1,6 +1,8 @@
 import unittest
 from datetime import date
 
+from unittest.mock import patch
+
 from app.services.scraper_service import ScraperService
 
 
@@ -58,13 +60,8 @@ class ScraperServiceTests(unittest.TestCase):
         def fake_get(url, timeout=15):
             return _MockResponse(text=BBC_HTML)
 
-        original = service._scrape_bbc
-        service._scrape_bbc = original.__get__(service)  # type: ignore
-        # patch requests.get used inside scraper
-        import app.services.scraper_service as scr_mod
-
-        scr_mod.requests.get = fake_get  # type: ignore
-        fixtures = service.get_fixtures(date(2026, 1, 7))
+        with patch("app.services.scraper_service.requests.get", fake_get):
+            fixtures = service.get_fixtures(date(2026, 1, 7))
         self.assertEqual(len(fixtures), 1)
         self.assertEqual(fixtures[0]["home"], "Arsenal")
         self.assertEqual(fixtures[0]["home_score"], 2)
@@ -79,12 +76,10 @@ class ScraperServiceTests(unittest.TestCase):
             return _MockResponse(json_data=ESPN_JSON)
 
         service._scrape_bbc = failing_bbc  # type: ignore
-        import app.services.scraper_service as scr_mod
-
-        scr_mod.requests.get = fake_get  # type: ignore
-        fixtures = service.get_fixtures(date(2026, 1, 8))
+        with patch("app.services.scraper_service.requests.get", fake_get):
+            fixtures = service.get_fixtures(date(2026, 1, 8))
         self.assertEqual(fixtures[0]["home"], "Leeds")
-        self.assertEqual(fixtures[0]["status"], "in progress")
+        self.assertEqual(fixtures[0]["status"], "live")
 
 
 if __name__ == "__main__":

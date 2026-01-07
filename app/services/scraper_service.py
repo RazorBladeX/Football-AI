@@ -1,4 +1,3 @@
-import json
 import logging
 from datetime import date
 from typing import Dict, List
@@ -6,8 +5,18 @@ from typing import Dict, List
 import requests
 from bs4 import BeautifulSoup
 
+from app.config import settings
 from app.utils.caching import ttl_cache
 from app.utils.rate_limit import RateLimiter
+
+
+def safe_int(text: str | None) -> int | None:
+    if text is None:
+        return None
+    try:
+        return int(text)
+    except (ValueError, TypeError):
+        return None
 
 logger = logging.getLogger(__name__)
 
@@ -15,15 +24,22 @@ logger = logging.getLogger(__name__)
 class ScraperService:
     def __init__(self):
         self.rate_limiter = RateLimiter(1.0)
+        self.primary = settings.scrape_primary.lower()
+        self.fallback = settings.scrape_fallback.lower()
 
     @ttl_cache(ttl_seconds=120)
     def get_fixtures(self, target_date: date) -> List[Dict]:
         """Return fixtures and results for the given date, primary source BBC with ESPN fallback."""
-        try:
-            return self._scrape_bbc(target_date)
-        except Exception as exc:
-            logger.warning("BBC scrape failed, falling back to ESPN: %s", exc)
-            return self._scrape_espn(target_date)
+        order = [self.primary, self.fallback]
+        for source in order:
+            try:
+                if source == "bbc":
+                    return self._scrape_bbc(target_date)
+                if source == "espn":
+                    return self._scrape_espn(target_date)
+            except Exception as exc:
+                logger.warning("%s scrape failed, trying next: %s", source.upper(), exc)
+        raise ValueError("All scrapers failed")
 
     def _scrape_bbc(self, target_date: date) -> List[Dict]:
         url = f"https://www.bbc.co.uk/sport/football/scores-fixtures/{target_date.isoformat()}"
@@ -32,14 +48,6 @@ class ScraperService:
         response.raise_for_status()
         soup = BeautifulSoup(response.text, "html.parser")
         fixtures: List[Dict] = []
-
-        def safe_int(text: str | None) -> int | None:
-            if text is None:
-                return None
-            try:
-                return int(text)
-            except ValueError:
-                return None
 
         for fixture in soup.select("article.gs-o-list-ui__item--flush"):
             league = fixture.find_previous("h3")
@@ -81,14 +89,17 @@ class ScraperService:
                 continue
             comp = competitions[0]
             competitors = {c["homeAway"]: c for c in comp.get("competitors", [])}
+            status = event.get("status", {}).get("type", {}).get("name", "upcoming").lower()
+            if status == "in progress":
+                status = "live"
             fixtures.append(
                 {
                     "league": comp.get("league", {}).get("name", "ESPN England"),
                     "home": competitors.get("home", {}).get("team", {}).get("displayName"),
                     "away": competitors.get("away", {}).get("team", {}).get("displayName"),
-                    "status": event.get("status", {}).get("type", {}).get("name", "upcoming").lower(),
-                    "home_score": int(competitors.get("home", {}).get("score", 0)),
-                    "away_score": int(competitors.get("away", {}).get("score", 0)),
+                    "status": status,
+                    "home_score": safe_int(competitors.get("home", {}).get("score")),
+                    "away_score": safe_int(competitors.get("away", {}).get("score")),
                     "kickoff": event.get("date"),
                 }
             )

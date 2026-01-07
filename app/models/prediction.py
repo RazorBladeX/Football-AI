@@ -11,7 +11,7 @@ class Prediction(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     match_id: Mapped[int] = mapped_column(ForeignKey("matches.id"), nullable=False)
-    model_used: Mapped[str] = mapped_column(String(50))
+    model_used: Mapped[str] = mapped_column(String(50), default="unknown")
     confidence: Mapped[float | None] = mapped_column()
     final_score_home: Mapped[int | None] = mapped_column()
     final_score_away: Mapped[int | None] = mapped_column()

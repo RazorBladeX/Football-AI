@@ -1,4 +1,6 @@
 from datetime import date
+import logging
+
 from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -15,6 +17,7 @@ from app.services.live_score_service import LiveScoreService
 from app.services.match_service import MatchService
 from app.services.prediction_service import PredictionService
 from app.services.scraper_service import ScraperService
+from app.database.db import get_session
 from app.ui.pages.home import HomePage
 from app.ui.pages.predictions import PredictionsPage
 
@@ -49,7 +52,7 @@ class MainWindow(QMainWindow):
         self.stack.addWidget(self.settings_page)
 
         refresh_button = QPushButton("Refresh")
-        refresh_button.clicked.connect(lambda: self.refresh_matches(date.today()))
+        refresh_button.clicked.connect(self._safe_refresh)
 
         sidebar_layout = QVBoxLayout()
         brand = QLabel("Football AI")
@@ -78,18 +81,25 @@ class MainWindow(QMainWindow):
     def refresh_matches(self, target_date: date) -> None:
         fixtures = self.scraper_service.get_fixtures(target_date)
         rows = []
-        for item in fixtures:
-            league = self.match_service.ensure_league(item["league"], tier=1)
-            home = self.match_service.ensure_team(item["home"], league)
-            away = self.match_service.ensure_team(item["away"], league)
-            self.match_service.upsert_match(
-                league=league,
-                home_team=home,
-                away_team=away,
-                kickoff=None,
-                status=item.get("status", "upcoming"),
-                home_score=item.get("home_score"),
-                away_score=item.get("away_score"),
-            )
-            rows.append(item)
+        with get_session() as session:
+            for item in fixtures:
+                league = self.match_service.ensure_league(item["league"], tier=1, session=session)
+                home = self.match_service.ensure_team(item["home"], league, session=session)
+                away = self.match_service.ensure_team(item["away"], league, session=session)
+                self.match_service.upsert_match(
+                    league=league,
+                    home_team=home,
+                    away_team=away,
+                    kickoff=None,
+                    status=item.get("status", "upcoming"),
+                    home_score=item.get("home_score"),
+                    away_score=item.get("away_score"),
+                )
+                rows.append(item)
         self.home_page.load_matches(rows)
+
+    def _safe_refresh(self):
+        try:
+            self.refresh_matches(date.today())
+        except Exception as exc:
+            logging.getLogger(__name__).error("Refresh failed: %s", exc)

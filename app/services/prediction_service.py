@@ -75,13 +75,30 @@ class PredictionService:
             }
         response = ollama.generate(model=self.model, prompt=prompt)
         raw_text = response.get("response", "")
-        return {
+        parsed = self._parse_prediction(raw_text)
+        parsed["raw_response"] = raw_text
+        return parsed
+
+    def _parse_prediction(self, text: str) -> Dict:
+        """Minimal parser expecting lines like 'Final score: 2-1'."""
+        result = {
             "confidence": 0.5,
-            "final_score_home": 1,
-            "final_score_away": 0,
-            "first_half_goals": 1,
-            "second_half_goals": 0,
-            "total_corners": 7,
-            "total_cards": 2,
-            "raw_response": raw_text,
+            "final_score_home": None,
+            "final_score_away": None,
+            "first_half_goals": None,
+            "second_half_goals": None,
+            "total_corners": None,
+            "total_cards": None,
         }
+        for line in text.splitlines():
+            lower = line.lower()
+            if "final" in lower and "-" in line:
+                parts = [p.strip() for p in line.replace("final score", "").split("-")]
+                if len(parts) == 2 and parts[0].isdigit() and parts[1].isdigit():
+                    result["final_score_home"] = int(parts[0])
+                    result["final_score_away"] = int(parts[1])
+            if "confidence" in lower:
+                tokens = [t for t in line.replace("%", "").split() if t.replace(".", "").isdigit()]
+                if tokens:
+                    result["confidence"] = min(1.0, float(tokens[0]) / 100 if float(tokens[0]) > 1 else float(tokens[0]))
+        return result
