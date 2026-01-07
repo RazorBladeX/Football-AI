@@ -49,11 +49,12 @@ class SettingsPage(QWidget):
 
         self.refresh = QSpinBox()
         self.refresh.setRange(1, 120)
-        default_refresh = int(DEFAULT_SETTINGS.get("refresh_interval_minutes", "15"))
         try:
-            self.refresh.setValue(int(self.settings.get("refresh_interval_minutes", str(default_refresh))))
-        except (TypeError, ValueError):
-            self.refresh.setValue(default_refresh)
+            self.refresh.setValue(
+                int(self.settings.get("refresh_interval_minutes", DEFAULT_SETTINGS["refresh_interval_minutes"]))
+            )
+        except (TypeError, ValueError, KeyError):
+            self.refresh.setValue(int(DEFAULT_SETTINGS["refresh_interval_minutes"]))
 
         form = QFrame()
         form.setObjectName("panel")

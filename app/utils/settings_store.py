@@ -32,4 +32,3 @@ def save_settings(settings: Dict[str, str]) -> None:
         SETTINGS_FILE.write_text(json.dumps(settings, indent=2))
     except (OSError, PermissionError):
         logging.getLogger(__name__).warning("Unable to persist settings to %s", SETTINGS_FILE)
-        return

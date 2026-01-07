@@ -164,9 +164,7 @@ class HomePage(QWidget):
         status_counts = self._count_statuses(rows)
         self._render_chart(status_counts)
         self._update_metrics(status_counts)
-        if rows:
-            self.table.selectRow(0)
-            self._set_detail(rows[0])
+        self._reset_detail()
 
     def _render_chart(self, status_counts: dict) -> None:
         self.figure.clear()
@@ -245,3 +243,10 @@ class HomePage(QWidget):
             except ValueError:
                 return kickoff_raw.replace("T", " ").replace("Z", "")
         return str(kickoff_raw)
+
+    def _reset_detail(self) -> None:
+        self.teams_label.setText("Select a match")
+        self.status_value.setText("-")
+        self.score_label.setText("")
+        self.league_label.setText("")
+        self.kickoff_label.setText("Kickoff · TBD")
