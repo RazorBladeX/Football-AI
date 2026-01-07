@@ -83,11 +83,10 @@ class ScraperServiceTests(unittest.TestCase):
 
     def test_espn_endpoint_uses_site_api(self):
         service = ScraperService()
-        service.primary = "espn"
         target_date = date(2026, 1, 9)
         with patch("app.services.scraper_service.requests.get") as mock_get:
             mock_get.return_value = _MockResponse(json_data=ESPN_JSON)
-            fixtures = service.get_fixtures(target_date)
+            fixtures = service._scrape_espn(target_date)
         called_url = mock_get.call_args[0][0]
         self.assertIn("apis/site/v2/sports/soccer/eng.1/scoreboard", called_url)
         self.assertIn(target_date.strftime("%Y%m%d"), called_url)
