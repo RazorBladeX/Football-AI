@@ -2,6 +2,7 @@ from datetime import date, datetime
 from typing import List
 
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from app.database.db import get_session
 from app.models.league import League
@@ -96,10 +97,36 @@ class MatchService:
         start = datetime.combine(target_date, datetime.min.time())
         end = datetime.combine(target_date, datetime.max.time())
         with get_session() as session:
-            base_query = select(Match).where(Match.kickoff_utc >= start, Match.kickoff_utc <= end)
+            base_query = (
+                select(Match)
+                .options(selectinload(Match.home_team), selectinload(Match.away_team))
+                .where(Match.kickoff_utc >= start, Match.kickoff_utc <= end)
+            )
             matches = session.execute(base_query).scalars().all()
-            matches += session.execute(select(Match).where(Match.kickoff_utc.is_(None))).scalars().all()
+            matches += (
+                session.execute(
+                    select(Match)
+                    .options(selectinload(Match.home_team), selectinload(Match.away_team))
+                    .where(Match.kickoff_utc.is_(None))
+                )
+                .scalars()
+                .all()
+            )
+            for match in matches:
+                session.expunge(match)
             return matches
+
+    def get_match(self, match_id: int) -> Match | None:
+        """Return a detached Match with teams eagerly loaded, or None if missing."""
+        with get_session() as session:
+            match = session.get(
+                Match,
+                match_id,
+                options=[selectinload(Match.home_team), selectinload(Match.away_team)],
+            )
+            if match:
+                session.expunge(match)
+            return match
 
     def live_matches(self) -> List[Match]:
         with get_session() as session:
