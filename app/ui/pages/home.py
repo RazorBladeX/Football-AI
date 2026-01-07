@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from datetime import datetime
 
 import matplotlib
@@ -233,7 +233,7 @@ class HomePage(QWidget):
         kickoff_display = self._format_kickoff_time(match.get("kickoff"))
         self.kickoff_label.setText(f"Kickoff · {kickoff_display}")
 
-    def _format_kickoff_time(self, kickoff_raw) -> str:
+    def _format_kickoff_time(self, kickoff_raw: Optional[str]) -> str:
         if not kickoff_raw:
             return "TBD"
         if isinstance(kickoff_raw, str):
@@ -250,7 +250,7 @@ class HomePage(QWidget):
         return str(kickoff_raw)
 
     def _reset_detail(self) -> None:
-        self.teams_label.setText("Select a match")
+        self.teams_label.setText("No match selected")
         self.status_value.setText("-")
         self.score_label.setText("")
         self.league_label.setText("")

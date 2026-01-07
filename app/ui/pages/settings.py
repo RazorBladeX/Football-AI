@@ -55,7 +55,7 @@ class SettingsPage(QWidget):
             default_refresh_str = DEFAULT_SETTINGS["refresh_interval_minutes"]
             raw_refresh = self.settings.get("refresh_interval_minutes", default_refresh_str)
             self.refresh.setValue(int(raw_refresh))
-        except (TypeError, ValueError, KeyError):
+        except (TypeError, ValueError):
             self.refresh.setValue(FALLBACK_REFRESH_MINUTES)
 
         form = QFrame()
