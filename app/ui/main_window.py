@@ -1,6 +1,8 @@
 from datetime import date
 from PySide6.QtWidgets import (
+    QFrame,
     QHBoxLayout,
+    QLabel,
     QListWidget,
     QMainWindow,
     QPushButton,
@@ -46,15 +48,19 @@ class MainWindow(QMainWindow):
         self.stack.addWidget(self.predictions_page)
         self.stack.addWidget(self.settings_page)
 
-        refresh_button = QPushButton("Refresh Now")
+        refresh_button = QPushButton("Refresh")
         refresh_button.clicked.connect(lambda: self.refresh_matches(date.today()))
 
-        layout = QVBoxLayout()
-        layout.addWidget(self.sidebar)
-        layout.addWidget(refresh_button)
+        sidebar_layout = QVBoxLayout()
+        brand = QLabel("Football AI")
+        brand.setStyleSheet("font-size: 20px; font-weight: 700; padding: 12px 8px;")
+        sidebar_layout.addWidget(brand)
+        sidebar_layout.addWidget(self.sidebar, 1)
+        sidebar_layout.addWidget(refresh_button)
 
-        sidebar_container = QWidget()
-        sidebar_container.setLayout(layout)
+        sidebar_container = QFrame()
+        sidebar_container.setObjectName("card")
+        sidebar_container.setLayout(sidebar_layout)
 
         root = QWidget()
         root_layout = QHBoxLayout()

@@ -11,6 +11,7 @@ from app.services.match_service import MatchService
 from app.services.prediction_service import PredictionService
 from app.services.scraper_service import ScraperService
 from app.ui.main_window import MainWindow
+from app.ui.theme import apply_dark_palette
 
 
 def bootstrap():
@@ -28,6 +29,7 @@ def bootstrap():
     live_service.start()
 
     app = QApplication(sys.argv)
+    apply_dark_palette(app)
     window = MainWindow(
         match_service=match_service,
         prediction_service=prediction_service,
