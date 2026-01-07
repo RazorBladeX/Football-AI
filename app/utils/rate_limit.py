@@ -14,8 +14,7 @@ class RateLimiter:
         with self._lock:
             now = time.time()
             wait_for = max(0.0, self.min_interval_seconds - (now - self._last_time))
-        if wait_for:
-            time.sleep(wait_for)
-        with self._lock:
+            if wait_for:
+                time.sleep(wait_for)
             self._last_time = time.time()
         yield

@@ -55,7 +55,7 @@ class ScraperService:
                 }
             )
         if not fixtures:
-            raise ValueError("BBC returned no fixtures")
+            raise ValueError(f"BBC returned no fixtures for {target_date} ({url})")
         return fixtures
 
     def _scrape_espn(self, target_date: date) -> List[Dict]:
@@ -65,7 +65,8 @@ class ScraperService:
         response.raise_for_status()
         data = response.json()
         fixtures: List[Dict] = []
-        for event in data.get("events", []):
+        events = data.get("events", [])
+        for event in events:
             competitions = event.get("competitions", [])
             if not competitions:
                 continue
@@ -83,5 +84,6 @@ class ScraperService:
                 }
             )
         if not fixtures:
-            raise ValueError(f"ESPN returned no fixtures: {json.dumps(data)[:200]}")
+            logger.debug("ESPN response payload keys: %s", list(data.keys()))
+            raise ValueError(f"ESPN returned no fixtures for {target_date} ({url}) - events: {len(events)}")
         return fixtures

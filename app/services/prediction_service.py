@@ -45,6 +45,8 @@ class PredictionService:
             )
             session.add(prediction)
             session.flush()
+            session.refresh(prediction)
+            session.expunge(prediction)
             return prediction
 
     def _build_prompt(self, match: Match) -> str:
