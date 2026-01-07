@@ -27,4 +27,8 @@ def load_settings() -> Dict[str, str]:
 
 
 def save_settings(settings: Dict[str, str]) -> None:
-    SETTINGS_FILE.write_text(json.dumps(settings, indent=2))
+    try:
+        SETTINGS_FILE.write_text(json.dumps(settings, indent=2))
+    except (OSError, PermissionError):
+        # Best-effort persistence; ignore write failures to avoid crashing the UI.
+        return

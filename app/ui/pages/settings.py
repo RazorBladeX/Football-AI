@@ -51,7 +51,7 @@ class SettingsPage(QWidget):
         self.refresh.setRange(1, 120)
         try:
             self.refresh.setValue(int(self.settings.get("refresh_interval_minutes", "15")))
-        except Exception:
+        except (TypeError, ValueError):
             self.refresh.setValue(15)
 
         form = QFrame()
