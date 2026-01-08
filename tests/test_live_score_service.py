@@ -71,7 +71,9 @@ class LiveScoreServiceTests(unittest.TestCase):
 
     def test_refresh_window_skips_scraper_errors(self):
         service = LiveScoreService(_FailingScraper(), _DummyMatchService())
-        service.refresh_window(days_ahead=0)
+        with self.assertLogs("app.services.live_score_service", level="WARNING") as logs:
+            service.refresh_window(days_ahead=0)
+        self.assertTrue(any("Skipping" in entry for entry in logs.output))
 
 
 if __name__ == "__main__":
