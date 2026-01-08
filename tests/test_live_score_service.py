@@ -71,10 +71,7 @@ class LiveScoreServiceTests(unittest.TestCase):
 
     def test_refresh_window_skips_scraper_errors(self):
         service = LiveScoreService(_FailingScraper(), _DummyMatchService())
-        try:
-            service.refresh_window(days_ahead=0)
-        except Exception as exc:
-            self.fail(f"refresh_window should swallow scraper errors, got: {exc}")
+        service.refresh_window(days_ahead=0)
 
 
 if __name__ == "__main__":
