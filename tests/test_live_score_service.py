@@ -24,6 +24,11 @@ class _DummyScraper:
         ]
 
 
+class _FailingScraper:
+    def get_fixtures(self, target_date: date):
+        raise RuntimeError(f"no fixtures for {target_date}")
+
+
 class _DummyMatchService:
     def ensure_league(self, name: str, tier: int = 1, session=None):
         return SimpleNamespace(id=1, name=name)
@@ -63,6 +68,12 @@ class LiveScoreServiceTests(unittest.TestCase):
         self.assertEqual(len(scraper.calls), 2)
         self.assertEqual(scraper.calls[0], date(2000, 1, 1))
         self.assertEqual(scraper.calls[1], date(2000, 1, 2))
+
+    def test_refresh_window_skips_scraper_errors(self):
+        service = LiveScoreService(_FailingScraper(), _DummyMatchService())
+        with self.assertLogs("app.services.live_score_service", level="WARNING") as logs:
+            service.refresh_window(days_ahead=0)
+        self.assertTrue(any("Skipping" in entry for entry in logs.output))
 
 
 if __name__ == "__main__":
