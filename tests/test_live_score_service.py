@@ -73,7 +73,7 @@ class LiveScoreServiceTests(unittest.TestCase):
         service = LiveScoreService(_FailingScraper(), _DummyMatchService())
         try:
             service.refresh_window(days_ahead=0)
-        except ValueError as exc:
+        except Exception as exc:
             self.fail(f"refresh_window should swallow scraper errors, got: {exc}")
 
 
