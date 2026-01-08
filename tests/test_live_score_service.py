@@ -26,7 +26,7 @@ class _DummyScraper:
 
 class _FailingScraper:
     def get_fixtures(self, target_date: date):
-        raise ValueError(f"no fixtures for {target_date}")
+        raise RuntimeError(f"no fixtures for {target_date}")
 
 
 class _DummyMatchService:

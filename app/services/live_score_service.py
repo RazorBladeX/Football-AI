@@ -64,7 +64,7 @@ class LiveScoreService:
     def _refresh_date(self, target_date: date) -> None:
         try:
             fixtures = self.scraper.get_fixtures(target_date)
-        except ValueError as exc:
+        except Exception as exc:
             logger.warning("Skipping %s due to scrape error: %s", target_date, exc)
             return
         for item in fixtures:
